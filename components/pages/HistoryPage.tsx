@@ -10,7 +10,7 @@ import {
 import { ScanLine, Upload, Link, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, CardStyles, ButtonStyles, LayoutStyles, TextStyles, InputStyles, ProgressStyles } from '@/constants/theme';
 
-export function ScannerPage() {
+export function HistoryPage() {
   const [inputText, setInputText] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
@@ -36,7 +36,7 @@ export function ScannerPage() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>محلل المحتوى الذكي</Text>
+          <Text style={styles.title}>سجل التحليل</Text>
           <Text style={styles.subtitle}>
             تحليل المقالات والروابط والنصوص لكشف المعلومات المُضللة بدقة عالية
           </Text>
@@ -60,12 +60,12 @@ export function ScannerPage() {
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.urlButton}>
               <Text style={styles.urlText}>تحليل الرابط</Text>
-              <Link size={20} color="#6B7280" />
+              {Link ? <Link size={20} color="#6B7280" /> : null}
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.uploadButton}>
               <Text style={styles.uploadText}>رفع ملف للتحليل</Text>
-              <Upload size={20} color="#6B7280" />
+              {Upload ? <Upload size={20} color="#6B7280" /> : null}
             </TouchableOpacity>
           </View>
 
@@ -77,7 +77,9 @@ export function ScannerPage() {
             <Text style={[styles.scanButtonText, isScanning && styles.scanButtonTextDisabled]}>
               {isScanning ? 'جاري التحليل المتقدم...' : 'بدء التحليل الذكي'}
             </Text>
-            <ScanLine size={20} color={isScanning ? Colors.text.muted : Colors.text.inverse} />
+            {ScanLine ? (
+              <ScanLine size={20} color={isScanning ? Colors.text.muted : Colors.text.inverse} />
+            ) : null}
           </TouchableOpacity>
         </View>
 
@@ -91,9 +93,9 @@ export function ScannerPage() {
                 {scanResult.credibility === 'reliable' ? 'محتوى موثوق وآمن' : 'محتوى مشكوك فيه - يتطلب مراجعة'}
               </Text>
               {scanResult.credibility === 'reliable' ? (
-                <CheckCircle size={24} color={Colors.success[600]} />
+                CheckCircle ? <CheckCircle size={24} color={Colors.success[600]} /> : null
               ) : (
-                <AlertTriangle size={24} color={Colors.danger[600]} />
+                AlertTriangle ? <AlertTriangle size={24} color={Colors.danger[600]} /> : null
               )}
             </View>
 

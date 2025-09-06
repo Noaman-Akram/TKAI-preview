@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Bell, Shield, Smartphone, Globe, CircleHelp as HelpCircle, LogOut, ChevronLeft, Moon, Zap, Key } from 'lucide-react-native';
+import { User, Bell, Shield, Smartphone, Globe, CircleHelp as HelpCircle, LogOut, ChevronLeft, Moon, Zap, Key, Mic } from 'lucide-react-native';
 import { ApiKeyConfig } from '@/components/ApiKeyConfig';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, CardStyles, ButtonStyles, TextStyles, LayoutStyles, StatusStyles, ModalStyles } from '@/constants/theme';
 

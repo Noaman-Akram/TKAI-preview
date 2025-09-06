@@ -60,12 +60,12 @@ export function OverviewPage() {
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.urlButton}>
               <Text style={styles.urlText}>تحليل الرابط</Text>
-              <Link size={20} color="#6B7280" />
+              {Link ? <Link size={20} color="#6B7280" /> : null}
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.uploadButton}>
               <Text style={styles.uploadText}>رفع ملف للتحليل</Text>
-              <Upload size={20} color="#6B7280" />
+              {Upload ? <Upload size={20} color="#6B7280" /> : null}
             </TouchableOpacity>
           </View>
 
@@ -77,7 +77,9 @@ export function OverviewPage() {
             <Text style={[styles.scanButtonText, isScanning && styles.scanButtonTextDisabled]}>
               {isScanning ? 'جاري التحليل المتقدم...' : 'بدء التحليل الذكي'}
             </Text>
-            <ScanLine size={20} color={isScanning ? Colors.text.muted : Colors.text.inverse} />
+            {ScanLine ? (
+              <ScanLine size={20} color={isScanning ? Colors.text.muted : Colors.text.inverse} />
+            ) : null}
           </TouchableOpacity>
         </View>
 
@@ -91,9 +93,9 @@ export function OverviewPage() {
                 {scanResult.credibility === 'reliable' ? 'محتوى موثوق وآمن' : 'محتوى مشكوك فيه - يتطلب مراجعة'}
               </Text>
               {scanResult.credibility === 'reliable' ? (
-                <CheckCircle size={24} color={Colors.success[600]} />
+                CheckCircle ? <CheckCircle size={24} color={Colors.success[600]} /> : null
               ) : (
-                <AlertTriangle size={24} color={Colors.danger[600]} />
+                AlertTriangle ? <AlertTriangle size={24} color={Colors.danger[600]} /> : null
               )}
             </View>
 

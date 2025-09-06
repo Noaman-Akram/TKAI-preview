@@ -11,10 +11,11 @@ import {
   Platform,
   Image,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Search as SearchIcon, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { db, storage } from '@/firebaseConfig';
+import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle } from 'lucide-react-native';
+import { db } from '@/firebaseConfig';
 import {
   collection,
   addDoc,
@@ -26,11 +27,13 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
+  deleteDoc,
 } from 'firebase/firestore';
 import Markdown from 'react-native-markdown-display';
-import { ref, uploadString, uploadBytes, getDownloadURL } from 'firebase/storage';
+// Storage is not configured; images are embedded as data URLs
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
+// Removed PDF document picker in favor of a single image attach button
 import * as WebBrowser from 'expo-web-browser';
 import * as FileSystem from 'expo-file-system';
 import { SpeechToText } from '@/components/SpeechToText';
@@ -159,6 +162,9 @@ export function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingAttachmentUri, setPendingAttachmentUri] = useState<string | null>(null);
+  const [conversationsCollapsed, setConversationsCollapsed] = useState(false);
   const [showSpeechToText, setShowSpeechToText] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [liveDraft, setLiveDraft] = useState('');
@@ -355,31 +361,108 @@ export function ChatPage() {
     return { type: 'analysis', executive: exec, claims, proofs, credibility, gaps, recommendations: recs, missingFields: missing };
   };
 
+  // Transform certain sections into simple RTL tables for readability
+  const transformDraftForDisplay = (md: string, personaId: PersonaId) => {
+    const toTable = (title: string, block: string) => {
+      const rows = block
+        .split(/\n/)
+        .filter(l => /^-\s+/.test(l))
+        .map(l => l.replace(/^-\s+/, '').trim())
+        .filter(Boolean);
+      if (!rows.length) return null;
+      const header = `| البند | التفاصيل |\n| --- | --- |`;
+      const body = rows.map(r => {
+        const parts = r.split(/[:：-]\s*/, 2);
+        const k = parts[0] || 'بند';
+        const v = parts[1] || parts[0];
+        return `| ${k} | ${v} |`;
+      }).join('\n');
+      return `\n\n### ${title}\n${header}\n${body}\n`;
+    };
+    const between = (needle: RegExp, source: string) => {
+      const m = source.match(needle); if (!m) return { start: -1, end: -1, content: '' };
+      const start = m.index ?? 0;
+      const hdrLen = m[0].length;
+      const after = source.slice(start + hdrLen);
+      const relEnd = after.search(/^#{1,6}\s+/m);
+      const end = relEnd === -1 ? source.length : start + hdrLen + relEnd;
+      const content = source.slice(start + hdrLen, end).trim();
+      return { start, end, content };
+    };
+    try {
+      let out = md
+        // remove empty bullet lines (just a dash or dot)
+        .replace(/\n-\s*(?:[•\-]?\s*)?(?=\n)/g, '\n')
+        .replace(/\n\s*•\s*(?=\n)/g, '\n');
+
+      const targets = [
+        { key: 'الأطراف', rx: /^#{1,6}\s*الأطراف:?/mi },
+        { key: 'الأدلة والمضبوطات', rx: /^#{1,6}\s*الأدلة والمضبوطات:?/mi },
+        { key: 'الإجراءات المتخذة', rx: /^#{1,6}\s*الإجراءات المتخذة:?/mi },
+      ];
+      for (const t of targets) {
+        const seg = between(t.rx, out);
+        if (seg.start !== -1 && /(^|\n)-\s+/.test(seg.content)) {
+          const tbl = toTable(t.key, seg.content);
+          if (tbl) {
+            out = out.slice(0, seg.start) + `### ${t.key}\n` + tbl + out.slice(seg.end);
+          }
+        }
+      }
+
+      // Structure "البيانات العامة" by converting key:value lines into a table
+      const general = between(/^#{1,6}\s*البيانات\s*العامة:?/mi, out);
+      if (general.start !== -1) {
+        const lines = general.content
+          .split(/\n/)
+          .map(s => s.replace(/^[-•]\s*/, '').trim())
+          .filter(Boolean);
+        const kv = lines
+          .map(l => {
+            const m2 = l.match(/^([^:：\-]+)[:：\-]\s*(.*)$/);
+            if (!m2) return null;
+            return { k: m2[1].trim(), v: m2[2].trim() || 'غير متوفر' };
+          })
+          .filter(Boolean) as {k:string;v:string}[];
+        if (kv.length) {
+          const header = `| البند | التفاصيل |\n| --- | --- |`;
+          const body = kv.map(({k,v}) => `| ${k} | ${v} |`).join('\n');
+          const tbl = `\n\n### البيانات العامة\n${header}\n${body}\n`;
+          out = out.slice(0, general.start) + `### البيانات العامة\n` + tbl + out.slice(general.end);
+        }
+      }
+      return out;
+    } catch {
+      return md;
+    }
+  };
+
   // No modal anymore; we keep inline start panel when no conversation selected
 
-  const uploadFileToStorage = async (uri: string, contentType: string, fileName: string): Promise<{ url: string; name: string; contentType: string; size?: number; }> => {
-    if (!selectedConversation) throw new Error('لا توجد محادثة مختارة');
-    const safeName = fileName.replace(/[^\w\-\.]+/g, '_');
-    const path = `conversations/${selectedConversation.id}/attachments/${Date.now()}_${safeName}`;
-    const storageRef = ref(storage, path);
-
-    // Web: fetch blob and uploadBytes; Native: read base64 and uploadString
-    if (Platform.OS === 'web') {
+  const embedImageAsDataUrl = async (uri: string, contentType: string, fileName: string): Promise<{ url: string; name: string; contentType: string; size?: number; }> => {
+    let base64: string | undefined;
+    try {
+      base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+    } catch {}
+    if (!base64 && Platform.OS === 'web') {
       const res = await fetch(uri);
       const blob = await res.blob();
-      await uploadBytes(storageRef, blob, { contentType });
-    } else {
-      const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-      await uploadString(storageRef, b64, 'base64', { contentType });
+      base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          resolve(dataUrl.split(',')[1] || '');
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     }
-    const url = await getDownloadURL(storageRef);
-
-    let size: number | undefined = undefined;
+    const url = `data:${contentType};base64,${base64 || ''}`;
+    let size: number | undefined;
     try {
       const info = await FileSystem.getInfoAsync(uri);
       if (info.exists && info.size) size = info.size as number;
     } catch {}
-
     return { url, name: fileName, contentType, size };
   };
 
@@ -387,27 +470,20 @@ export function ChatPage() {
     if (!selectedConversation) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (perm.status !== 'granted') return;
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, base64: true });
     if (res.canceled || !res.assets?.length) return;
     const asset = res.assets[0];
     const uri = asset.uri;
     const name = (asset as any).fileName || `image_${Date.now()}.jpg`;
     const contentType = (asset as any).mimeType || 'image/jpeg';
 
-    setIsTyping(true);
+    setPendingAttachmentUri(uri);
+    setUploading(true);
     try {
-      const attachment = await uploadFileToStorage(uri, contentType, name);
-      const msgRef = await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
-        content: '',
-        type: 'user',
-        createdAt: serverTimestamp(),
-        attachment,
-      });
-      setMessages(prev => [...prev, { id: msgRef.id, content: '', type: 'user', timestamp: new Date(), attachment }]);
-      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
-        lastMessage: attachment.name,
-        updatedAt: serverTimestamp(),
-      });
+      const dataUrl = (asset as any).base64 ? `data:${contentType};base64,${(asset as any).base64}` : undefined;
+      const attachment = dataUrl ? { url: dataUrl, name, contentType } : await embedImageAsDataUrl(uri, contentType, name);
+      const localId = `local-${Date.now()}`;
+      setMessages(prev => [...prev, { id: localId, content: '', type: 'user', timestamp: new Date(), attachment }]);
     } catch (e) {
       const assistantMessage: Message = {
         id: (Date.now() + 4).toString(),
@@ -417,43 +493,8 @@ export function ChatPage() {
       };
       setMessages(prev => [...prev, assistantMessage]);
     } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleAttachDocument = async () => {
-    if (!selectedConversation) return;
-    const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
-    if (res.canceled || !res.assets?.length) return;
-    const asset = res.assets[0];
-    const uri = asset.uri;
-    const name = asset.name || `document_${Date.now()}.pdf`;
-    const contentType = asset.mimeType || 'application/pdf';
-
-    setIsTyping(true);
-    try {
-      const attachment = await uploadFileToStorage(uri, contentType, name);
-      const msgRef = await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
-        content: '',
-        type: 'user',
-        createdAt: serverTimestamp(),
-        attachment,
-      });
-      setMessages(prev => [...prev, { id: msgRef.id, content: '', type: 'user', timestamp: new Date(), attachment }]);
-      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
-        lastMessage: attachment.name,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (e) {
-      const assistantMessage: Message = {
-        id: (Date.now() + 5).toString(),
-        content: `تعذر رفع الملف: ${e instanceof Error ? e.message : ''}`,
-        type: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    } finally {
-      setIsTyping(false);
+      setUploading(false);
+      setPendingAttachmentUri(null);
     }
   };
 
@@ -517,8 +558,15 @@ export function ChatPage() {
       const systemPrompt = personaPrompts[personaId]?.system || personaPrompts.general.system;
       const apiMessages = [
         { role: 'system', content: systemPrompt },
-        ...messages.map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content })),
-        { role: 'user', content: text },
+        ...messages.map(m => {
+          const parts: any[] = [];
+          if (m.content) parts.push({ type: 'text', text: m.content });
+          if (m.attachment && m.attachment.contentType?.startsWith('image/')) {
+            parts.push({ type: 'image_url', image_url: { url: m.attachment.url } });
+          }
+          return { role: m.type === 'user' ? 'user' : 'assistant', content: parts.length ? parts : [{ type: 'text', text: '' }] };
+        }),
+        { role: 'user', content: [{ type: 'text', text }] },
       ];
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -598,6 +646,28 @@ export function ChatPage() {
     setSelectedConversation(null);
   };
 
+  const confirmDeleteConversation = (convId: string) => {
+    Alert.alert('حذف المحادثة', 'هل تريد حذف هذه المحادثة وجميع رسائلها؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      { text: 'حذف', style: 'destructive', onPress: () => deleteConversation(convId) },
+    ]);
+  };
+
+  const deleteConversation = async (convId: string) => {
+    try {
+      const msgs = await getDocs(collection(db, 'conversations', convId, 'messages'));
+      await Promise.allSettled(
+        msgs.docs.map(d => deleteDoc(doc(db, 'conversations', convId, 'messages', d.id)))
+      );
+      // Try deleting linked report (if created with same id)
+      try { await deleteDoc(doc(db, 'reports', convId)); } catch {}
+      await deleteDoc(doc(db, 'conversations', convId));
+      if (selectedConversation?.id === convId) setSelectedConversation(null);
+    } catch (e: any) {
+      Alert.alert('تعذر الحذف', e?.message || 'حدث خطأ أثناء حذف المحادثة.');
+    }
+  };
+
   const pickPersonaAndCreate = async (p: PersonaId) => {
     setErrorText(null);
     try {
@@ -674,13 +744,24 @@ export function ChatPage() {
       >
         <View style={styles.layoutRow}>
           {/* Left: Conversations Panel */}
-          <View style={styles.conversationsPanel}>
+          <View style={[styles.conversationsPanel, conversationsCollapsed && styles.conversationsPanelCollapsed]}>
             <View style={styles.convHeader}>
-              <Text style={styles.convTitle}>المحادثات</Text>
-              <TouchableOpacity style={styles.newChatButton} onPress={startNewChatFlow}>
-                <Plus size={18} color="#10B981" />
-                <Text style={styles.newChatText}>محادثة جديدة</Text>
-              </TouchableOpacity>
+              {!conversationsCollapsed && <Text style={styles.convTitle}>المحادثات</Text>}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2], marginLeft: 'auto' }}>
+                {!conversationsCollapsed && (
+                  <TouchableOpacity style={styles.newChatButton} onPress={startNewChatFlow}>
+                    <Plus size={18} color="#10B981" />
+                    <Text style={styles.newChatText}>محادثة جديدة</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => setConversationsCollapsed(v => !v)} style={styles.collapseBtn}>
+                  {conversationsCollapsed ? (
+                    <ChevronRight size={18} color={Colors.text.tertiary} />
+                  ) : (
+                    <ChevronLeft size={18} color={Colors.text.tertiary} />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
             <FlatList
               data={conversations}
@@ -700,10 +781,17 @@ export function ChatPage() {
                         <Bot size={14} color={Colors.primary[600]} />
                       )}
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
-                      <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
-                    </View>
+                    {!conversationsCollapsed && (
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
+                        <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
+                      </View>
+                    )}
+                    {selectedConversation?.id === item.id && !conversationsCollapsed && (
+                      <TouchableOpacity onPress={() => confirmDeleteConversation(item.id)} style={styles.trashBtn}>
+                        <Trash2 size={16} color={Colors.text.tertiary} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </TouchableOpacity>
               )}
@@ -794,17 +882,14 @@ export function ChatPage() {
                       {draftCollapsed ? <ChevronDown size={16} color={Colors.text.primary} /> : <ChevronUp size={16} color={Colors.text.primary} />}
                     </TouchableOpacity>
                     <FileText size={16} color={Colors.primary[600]} />
-                    <Text style={styles.draftTitle}>مسودة التقرير</Text>
+                    <Text style={styles.draftTitle}>{selectedConversation?.persona === 'legal' ? 'تقرير قانوني' : 'مسودة التقرير'}</Text>
+                    {selectedConversation?.persona === 'legal' && (
+                      <View style={styles.badgeOfficial}><Text style={styles.badgeOfficialText}>محضر رسمي</Text></View>
+                    )}
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={[styles.pillBtn, styles.pillOn]}>
-                      <Text style={[styles.pillText, styles.pillTextOn]}>تلقائي</Text>
-                    </View>
-                    <TouchableOpacity style={[styles.secondaryBtn, (!liveDraft.trim() || savingDraft) && styles.secondaryBtnDisabled]} disabled={!liveDraft.trim() || savingDraft} onPress={() => saveReport('draft')}>
-                      <Text style={[styles.secondaryBtnText, (!liveDraft.trim() || savingDraft) && styles.secondaryBtnTextDisabled]}>{savingDraft ? 'جارٍ الحفظ...' : 'حفظ مسودة'}</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.primaryBtn, (!liveDraft.trim() || savingDraft) && styles.primaryBtnDisabled]} disabled={!liveDraft.trim() || savingDraft} onPress={() => saveReport('final')}>
-                      <Text style={[styles.primaryBtnText, (!liveDraft.trim() || savingDraft) && styles.primaryBtnTextDisabled]}>إنهاء</Text>
+                      <Text style={[styles.primaryBtnText, (!liveDraft.trim() || savingDraft) && styles.primaryBtnTextDisabled]}>{savingDraft ? 'جارٍ الحفظ...' : 'حفظ'}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -812,8 +897,10 @@ export function ChatPage() {
                   <>
                     <View style={styles.draftBody}>
                       {liveDraft ? (
-                        <ScrollView style={styles.draftScroll} contentContainerStyle={{ paddingBottom: 8 }}>
-                          <Markdown style={markdownStyles}>{liveDraft}</Markdown>
+                        <ScrollView style={styles.draftScroll} contentContainerStyle={{ paddingBottom: 8, alignItems: 'flex-end' }}>
+                          <View style={styles.draftContentWrap}>
+                            <Markdown style={markdownStyles}>{liveDraft}</Markdown>
+                          </View>
                         </ScrollView>
                       ) : (
                         <Text style={styles.draftEmpty}>ابدأ بالمراسلة، وسيتم توليد مسودة تقرير تلقائياً.</Text>
@@ -847,46 +934,47 @@ export function ChatPage() {
             )}
 
             {/* Input Area */}
-            <View style={styles.inputArea}>
+            <View style={[styles.inputArea, (!selectedConversation || uploading) && styles.inputAreaDisabled]}>
               <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() || !selectedConversation) && styles.sendButtonDisabled]}
+                style={[styles.sendButton, (!inputText.trim() || !selectedConversation || uploading) && styles.sendButtonDisabled]}
                 onPress={handleSend}
-                disabled={!inputText.trim() || !selectedConversation}
+                disabled={!inputText.trim() || !selectedConversation || uploading}
               >
                 <Send 
                   size={20} 
-                  color={inputText.trim() && selectedConversation ? "#FFFFFF" : "#9CA3AF"} 
+                  color={inputText.trim() && selectedConversation && !uploading ? "#FFFFFF" : "#9CA3AF"} 
                 />
               </TouchableOpacity>
 
               <View style={styles.inputActionsGroup}>
                 <TouchableOpacity
-                  style={styles.attachButton}
+                  style={[styles.attachButton, (!selectedConversation || uploading) && styles.attachButtonDisabled]}
                   onPress={handleAttachImage}
-                  disabled={!selectedConversation}
+                  disabled={!selectedConversation || uploading}
                 >
-                  <Paperclip size={18} color={Colors.text.tertiary} />
+                  <ImageIcon size={18} color={selectedConversation && !uploading ? Colors.text.tertiary : Colors.text.muted} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.attachButton}
-                  onPress={handleAttachDocument}
-                  disabled={!selectedConversation}
-                >
-                  <Text style={styles.attachDocText}>PDF</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.speechButton}
+                  style={[styles.speechButton, (!selectedConversation || uploading) && styles.speechButtonDisabled]}
                   onPress={() => setShowSpeechToText(true)}
-                  disabled={!selectedConversation}
+                  disabled={!selectedConversation || uploading}
                 >
-                  <Mic size={20} color="#10B981" />
+                  <Mic size={20} color={selectedConversation && !uploading ? "#10B981" : Colors.text.muted} />
                 </TouchableOpacity>
               </View>
 
+              {(uploading || pendingAttachmentUri) && (
+                <View style={styles.uploadingRow}>
+                  {pendingAttachmentUri ? (
+                    <Image source={{ uri: pendingAttachmentUri }} style={styles.uploadingThumb} />
+                  ) : null}
+                  <Text style={styles.uploadingText}>جارٍ رفع الصورة...</Text>
+                </View>
+              )}
+
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, (!selectedConversation || uploading) && styles.textInputDisabled]}
                 placeholder={selectedConversation ? "اكتب رسالتك هنا..." : "ابدأ محادثة جديدة واختر نوع المساعدة"}
                 placeholderTextColor="#9CA3AF"
                 value={inputText}
@@ -896,7 +984,7 @@ export function ChatPage() {
                 textAlign="right"
                 onSubmitEditing={handleSend}
                 blurOnSubmit={false}
-                editable={!!selectedConversation}
+                editable={!!selectedConversation && !uploading}
               />
             </View>
           </View>
@@ -1109,9 +1197,28 @@ const styles = StyleSheet.create({
   },
   draftBody: {
     padding: Spacing[3],
+    alignItems: 'flex-end',
   },
   draftScroll: {
-    maxHeight: 340,
+    maxHeight: 420,
+  },
+  draftContentWrap: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'flex-end',
+  },
+  badgeOfficial: {
+    backgroundColor: Colors.success[50],
+    borderColor: Colors.success[200],
+    borderWidth: 1,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 2,
+  },
+  badgeOfficialText: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.success[700],
+    fontFamily: Typography.weights.semibold,
   },
   draftEmpty: {
     fontSize: Typography.sizes.sm,
@@ -1168,6 +1275,9 @@ const styles = StyleSheet.create({
     borderRightColor: Colors.border.default,
     backgroundColor: Colors.background.primary,
   },
+  conversationsPanelCollapsed: {
+    width: 72,
+  },
   convHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1192,6 +1302,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[3],
+  },
+  trashBtn: {
+    padding: Spacing[1],
+    marginLeft: 'auto',
+  },
+  collapseBtn: {
+    padding: Spacing[1],
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.background.secondary,
   },
   convIconBadge: {
     width: 28,
@@ -1325,10 +1446,32 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.default,
     gap: Spacing[3],
   },
+  inputAreaDisabled: {
+    opacity: 0.6,
+  },
   inputActionsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[2],
+  },
+  uploadingRow: {
+    position: 'absolute',
+    left: Spacing[5],
+    bottom: Spacing[4] + 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  uploadingText: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.text.tertiary,
+  },
+  uploadingThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
   },
   textInput: {
     flex: 1,
@@ -1336,6 +1479,10 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     textAlignVertical: 'top',
     writingDirection: 'rtl' as const,
+  },
+  textInputDisabled: {
+    backgroundColor: Colors.background.tertiary,
+    borderColor: Colors.border.medium,
   },
   speechButton: {
     width: 48,
@@ -1347,6 +1494,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  speechButtonDisabled: {
+    backgroundColor: Colors.background.secondary,
+    borderColor: Colors.border.default,
+  },
   attachButton: {
     width: 40,
     height: 40,
@@ -1357,10 +1508,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  attachButtonDisabled: {
+    backgroundColor: Colors.background.secondary,
+    borderColor: Colors.border.light,
+  },
   attachDocText: {
     fontSize: Typography.sizes.xs,
     color: Colors.text.tertiary,
     fontFamily: Typography.weights.semibold,
+  },
+  attachDocTextDisabled: {
+    color: Colors.text.muted,
   },
   sendButton: {
     width: 48,
@@ -1403,9 +1561,20 @@ const markdownStyles = {
   paragraph: {
     marginBottom: Spacing[2],
   },
+  bullet_list: {
+    marginBottom: Spacing[2],
+  },
+  ordered_list: {
+    marginBottom: Spacing[2],
+  },
   list_item: {
     textAlign: 'right' as const,
   },
+  table: { marginBottom: Spacing[2], width: '100%' },
+  thead: { borderBottomWidth: 1, borderBottomColor: Colors.border.default },
+  th: { textAlign: 'right' as const, fontFamily: Typography.weights.semibold, paddingVertical: 6 },
+  tr: { borderBottomWidth: 1, borderBottomColor: Colors.border.light },
+  td: { textAlign: 'right' as const, paddingVertical: 6 },
 };
 
 // Markdown styles for chat bubbles

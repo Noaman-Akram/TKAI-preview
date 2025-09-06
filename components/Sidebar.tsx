@@ -128,12 +128,14 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
               <X size={18} color="#64748B" />
             </TouchableOpacity>
           )}
+                
           <View style={styles.logoContainer}>
-            <View style={styles.logoWrapper}>
-              <Text style={styles.logoText}>TK</Text>
-            </View>
+            <Image
+              source={require('../assets/images/Black.png')}
+              style={[styles.logoImage, { width: 90, height: 90 }]}
+            />
           </View>
-        </View>
+          </View>
 
         <View style={[styles.appTitle, { backgroundColor: palette.background.secondary, borderBottomColor: palette.border.default }]}>
               <Text style={[styles.appTitleText, { color: palette.text.primary }]}>منصة تكرونيكس للذكاء الاصطناعي</Text>
@@ -148,7 +150,7 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
                 .filter(item => item.category === category.id)
                 .map((item) => {
                   const isActive = activeSection === item.id;
-                  const IconComponent = item.icon;
+                  const IconComponent = item.icon as any;
 
                   return (
                     <TouchableOpacity
@@ -162,7 +164,8 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
                       <View style={styles.navItemContent}>
                         <Text style={[
                           styles.navItemText,
-                          { color: isActive ? '#FFFFFF' : palette.text.secondary },
+                          { color: isActive ? '#FFFFFF' : palette.text.secondary,      marginLeft: 0 ,
+                            marginRight: 5 },
                           isActive && styles.navItemTextActive,
                         ]}>
                           {item.label}
@@ -171,11 +174,14 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
                           styles.iconContainer,
                           { backgroundColor: isActive ? palette.primary[500] : palette.background.secondary, borderColor: isActive ? palette.primary[500] : palette.border.default }
                         ]}>
-                          <IconComponent
-                            size={16}
-                            color={isActive ? '#FFFFFF' : palette.text.secondary}
-                            strokeWidth={2}
-                          />
+                          {IconComponent ? (
+                            <IconComponent
+                              size={16}
+                              color={isActive ? '#FFFFFF' : palette.text.secondary}
+                              strokeWidth={2}
+                              style={{ margin: 4, paddingRight: 6, paddingLeft: 6 }}
+                            />
+                          ) : null}
                         </View>
                       </View>
                       {isActive && <View style={[styles.activeIndicator, { backgroundColor: palette.primary[500] }]} />}
@@ -193,11 +199,11 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>المستخدم الرئيسي</Text>
-              <Text style={styles.userRole}>محلل أمني</Text>
+              <Text style={styles.userName}>اللواء أحمد منصور</Text>
+              <Text style={styles.userRole}>وزارة الداخلية • قطاع الأمن العام</Text>
             </View>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>أ</Text>
             </View>
           </View>
         </View>
@@ -248,18 +254,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FAFBFC',
   },
   logoContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
-    justifyContent: 'flex-end',
   },
   logoWrapper: {
     width: 44,
@@ -296,6 +301,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    position: 'absolute',
+    left: 20,
   },
   appTitle: {
     paddingHorizontal: 20,

@@ -372,6 +372,11 @@ export function ComprehensiveMapPage() {
           </View>
         </View>
 
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
         {/* Statistics Overview */}
         <View style={styles.statsSection}>
           <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>إحصائيات عامة</Text>

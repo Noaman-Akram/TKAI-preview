@@ -1,5 +1,5 @@
 import React from 'react';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { View, Platform, Text } from 'react-native';
 
 export type CrimePoint = {
@@ -16,21 +16,21 @@ export type CrimePoint = {
   categories?: { theft: number; fraud: number; assault: number; cybercrime: number };
 };
 
-type Props = { height?: number; data: CrimePoint[] };
+type Props = { height?: number; data: CrimePoint[]; initialRegion?: Region };
 
 const riskColor = (lvl: CrimePoint['riskLevel']) => lvl === 'high' ? '#EF4444' : lvl === 'medium' ? '#F59E0B' : '#10B981';
 const trendEmoji = (t: CrimePoint['trend']) => t === 'up' ? '↗️' : t === 'down' ? '↘️' : '➡️';
 
-export default function CrimeMap({ height = 360, data }: Props) {
+export default function CrimeMap({ height = 360, data, initialRegion }: Props) {
   return (
     <View style={{ height, borderRadius: 16, overflow: 'hidden' }}>
       <MapView
         style={{ flex: 1 }}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        initialRegion={{
-          latitude: 26.8206, // Egypt center
+        initialRegion={initialRegion || {
+          latitude: 26.8206,
           longitude: 30.8025,
-          latitudeDelta: 12,  // zoom
+          latitudeDelta: 12,
           longitudeDelta: 12,
         }}
       >

@@ -9,7 +9,7 @@ export function AnalyticsPage() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>لوحة التحليلات</Text>
+          <Text style={styles.title}>تحليلات الكشف</Text>
           <Text style={styles.subtitle}>مؤشرات الأداء والتوجهات للتقارير وكشف التضليل</Text>
         </View>
 

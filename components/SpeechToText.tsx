@@ -234,7 +234,7 @@ export function SpeechToText({ onTranscriptionComplete, onClose }: SpeechToTextP
         <View style={styles.statusSection}>
           <View style={styles.statusIndicator}>
             <View style={[styles.statusDot, { backgroundColor: Colors.success[500] }]} />
-            <Text style={styles.statusText}>ElevenLabs متصل</Text>
+            <Text style={styles.statusText}> متصل</Text>
           </View>
         </View>
 

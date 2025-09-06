@@ -15,6 +15,7 @@ interface TopBarProps {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
   onLogoPress?: () => void;
+  onGoToChat?: () => void;
 }
 
 const sectionTitles: Record<string, string> = {
@@ -45,7 +46,7 @@ const sectionTitles: Record<string, string> = {
 
 const { width } = Dimensions.get('window');
 
-export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress }: TopBarProps) {
+export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress, onGoToChat }: TopBarProps) {
   const { palette } = useTheme();
   const isTablet = width >= 768;
   const isDesktop = width >= 1200;
@@ -53,8 +54,14 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
-      {/* Left Section - Search only */}
+      {/* Left Section - Menu toggle at far left + Search */}
       <View style={[styles.leftSection, isMobile && styles.leftSectionMobile]}>
+        <TouchableOpacity
+          style={[styles.menuButton, isMobile && styles.menuButtonMobile]}
+          onPress={onToggleSidebar}
+        >
+          <Menu size={18} color={palette.text.secondary} strokeWidth={2} />
+        </TouchableOpacity>
         {!isMobile && (
           <View style={[styles.searchContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }] }>
             <Search size={16} color={palette.text.muted} strokeWidth={2} />
@@ -82,10 +89,6 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
       <View style={[styles.rightSection, isMobile && styles.rightSectionMobile]}>
         {!isMobile && (
           <>
-            {/* Menu toggle on the right */}
-            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]} onPress={onToggleSidebar}>
-              <Menu size={18} color={palette.text.secondary} strokeWidth={2} />
-            </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}>
               <Bell size={18} color={palette.text.secondary} strokeWidth={2} />
               <View style={styles.notificationBadge}>
@@ -93,9 +96,9 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
               </View>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.primaryButton, { backgroundColor: palette.primary[500] }]}>
+            <TouchableOpacity style={[styles.actionButton, styles.primaryButton, { backgroundColor: palette.primary[500] }]} onPress={onGoToChat}>
               <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.primaryButtonText}>تحليل جديد</Text>
+              <Text style={styles.primaryButtonText}>محادثة جديدة</Text>
             </TouchableOpacity>
           </>
         )}
@@ -125,7 +128,7 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
               <Text style={styles.mobileBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.mobileActionButton, styles.mobilePrimaryButton]}>
+          <TouchableOpacity style={[styles.mobileActionButton, styles.mobilePrimaryButton]} onPress={onGoToChat}>
             <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
