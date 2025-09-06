@@ -59,6 +59,8 @@ const navigationItems = [
   { id: 'minutes-content-generator', label: 'منشئ محتوى المحاضر', icon: Sparkles, category: 'minutes' },
   { id: 'minutes-templates', label: 'قوالب المحاضر', icon: Layers, category: 'minutes' },
   { id: 'minutes-drafts', label: 'مسودات المحاضر', icon: FileText, category: 'minutes' },
+  // Saved Mahader moved here
+  { id: 'mahader', label: 'المحاضر المحفوظة', icon: FileText, category: 'minutes' },
   
   // Fake News Detection
   { id: 'overview', label: 'لوحة التحكم', icon: LayoutDashboard, category: 'detection' },
@@ -69,7 +71,6 @@ const navigationItems = [
   
   // Report Writing & Content Creation
   { id: 'report-writer', label: 'كاتب التقارير', icon: PenTool, category: 'reports' },
-  { id: 'mahader', label: 'المحاضر', icon: FileText, category: 'reports' },
   { id: 'content-generator', label: 'منشئ المحتوى', icon: Sparkles, category: 'reports' },
   { id: 'templates', label: 'قوالب التقارير', icon: Layers, category: 'reports' },
   { id: 'drafts', label: 'المسودات', icon: FileText, category: 'reports' },
@@ -78,6 +79,8 @@ const navigationItems = [
   { id: 'comprehensive-map', label: 'الخريطة الشاملة', icon: MapPin, category: 'platform' },
   { id: 'data-sources', label: 'مصادر البيانات', icon: Database, category: 'platform' },
   { id: 'ai-models', label: 'نماذج الذكاء الاصطناعي', icon: Bot, category: 'platform' },
+  { id: 'data-connection-models', label: 'نماذج ترابط البيانات', icon: Link, category: 'platform' },
+  { id: 'stats', label: 'إحصائيات', icon: TrendingUp, category: 'platform' },
   { id: 'search', label: 'البحث المتقدم', icon: Search, category: 'platform' },
   { id: 'collaboration', label: 'التعاون', icon: Users, category: 'platform' },
   { id: 'automation', label: 'الأتمتة', icon: Zap, category: 'platform' },

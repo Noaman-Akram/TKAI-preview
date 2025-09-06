@@ -7,7 +7,7 @@ import {
   TextInput,
   Dimensions,
 } from 'react-native';
-import { Search, Menu, Plus, Bell, Command, Zap, Moon, Sun } from 'lucide-react-native';
+import { Search, Menu, Plus, Bell, Command, Zap } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 interface TopBarProps {
@@ -46,22 +46,15 @@ const sectionTitles: Record<string, string> = {
 const { width } = Dimensions.get('window');
 
 export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress }: TopBarProps) {
-  const { mode, palette, toggle } = useTheme();
+  const { palette } = useTheme();
   const isTablet = width >= 768;
   const isDesktop = width >= 1200;
   const isMobile = width < 768;
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
-      {/* Left Section - Navigation & Search */}
+      {/* Left Section - Search only */}
       <View style={[styles.leftSection, isMobile && styles.leftSectionMobile]}>
-        <TouchableOpacity
-          style={[styles.menuButton, isMobile && styles.menuButtonMobile]}
-          onPress={onToggleSidebar}
-        >
-          <Menu size={isMobile ? 16 : 18} color={palette.text.secondary} strokeWidth={2} />
-        </TouchableOpacity>
-        
         {!isMobile && (
           <View style={[styles.searchContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }] }>
             <Search size={16} color={palette.text.muted} strokeWidth={2} />
@@ -89,6 +82,10 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
       <View style={[styles.rightSection, isMobile && styles.rightSectionMobile]}>
         {!isMobile && (
           <>
+            {/* Menu toggle on the right */}
+            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]} onPress={onToggleSidebar}>
+              <Menu size={18} color={palette.text.secondary} strokeWidth={2} />
+            </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}>
               <Bell size={18} color={palette.text.secondary} strokeWidth={2} />
               <View style={styles.notificationBadge}>
@@ -99,9 +96,6 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
             <TouchableOpacity style={[styles.actionButton, styles.primaryButton, { backgroundColor: palette.primary[500] }]}>
               <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
               <Text style={styles.primaryButtonText}>تحليل جديد</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]} onPress={toggle}>
-              {mode === 'dark' ? <Sun size={18} color={palette.text.secondary} /> : <Moon size={18} color={palette.text.secondary} />}
             </TouchableOpacity>
           </>
         )}

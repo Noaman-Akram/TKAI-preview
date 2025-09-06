@@ -10,6 +10,8 @@ import { SourcesPage } from '@/components/pages/SourcesPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
 import { DataSourcesPage } from '@/components/pages/DataSourcesPage';
 import { AIModelsPage } from '@/components/pages/AIModelsPage';
+import { DataConnectionModelsPage } from '@/components/pages/DataConnectionModelsPage';
+import { StatsPage } from '@/components/pages/StatsPage';
 import { SearchPage } from '@/components/pages/SearchPage';
 import { CollaborationPage } from '@/components/pages/CollaborationPage';
 import { AutomationPage } from '@/components/pages/AutomationPage';
@@ -70,6 +72,10 @@ export function MainContent({ activeSection }: MainContentProps) {
         return <DataSourcesPage />;
       case 'ai-models':
         return <AIModelsPage />;
+      case 'data-connection-models':
+        return <DataConnectionModelsPage />;
+      case 'stats':
+        return <StatsPage />;
       case 'search':
         return <SearchPage />;
       case 'collaboration':

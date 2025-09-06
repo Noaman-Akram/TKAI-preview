@@ -25,7 +25,7 @@ export function SpeechToText({ onTranscriptionComplete, onClose }: SpeechToTextP
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribedText, setTranscribedText] = useState('');
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [apiKey] = useState('665667e39baf7eb2e76be8dd5cf86301081d40ec733b93fc13b8167de159706e');
+  const [apiKey] = useState(process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY || '');
   const [transcriptionDetails, setTranscriptionDetails] = useState<any>(null);
 
   // Request audio permissions

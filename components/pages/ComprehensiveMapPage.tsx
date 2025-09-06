@@ -9,12 +9,17 @@ import {
 } from 'react-native';
 import { MapPin, TrendingUp, TrendingDown, TriangleAlert as AlertTriangle, Shield, Eye, Filter, Calendar, ChartBar as BarChart3, Users, Clock } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
+// Use platform resolution: web -> CrimeMap.tsx, native -> CrimeMap.native.tsx
+import CrimeMap from '../CrimeMap';
 
 const { width } = Dimensions.get('window');
 
 interface CrimeData {
+  id: string;
   governorate: string;
-  coordinates: { x: number; y: number };
+  nameEn?: string;
+  lat: number;
+  lng: number;
   totalCrimes: number;
   trend: 'up' | 'down' | 'stable';
   riskLevel: 'low' | 'medium' | 'high';
@@ -28,6 +33,8 @@ interface CrimeData {
     nextMonth: number;
     confidence: number;
   };
+  population?: string;
+  info?: string;
 }
 
 export function ComprehensiveMapPage() {
@@ -39,76 +46,116 @@ export function ComprehensiveMapPage() {
 
   const crimeData: CrimeData[] = [
     {
+      id: 'cairo',
       governorate: 'القاهرة',
-      coordinates: { x: 50, y: 45 },
+      nameEn: 'Cairo',
+      lat: 30.0444,
+      lng: 31.2357,
       totalCrimes: 1247,
       trend: 'down',
       riskLevel: 'medium',
       categories: { theft: 456, fraud: 234, assault: 123, cybercrime: 434 },
-      prediction: { nextMonth: 1180, confidence: 87 }
+      prediction: { nextMonth: 1180, confidence: 87 },
+      population: '20.9M',
+      info: 'عاصمة مصر وأكبر مدنها'
     },
     {
+      id: 'giza',
       governorate: 'الجيزة',
-      coordinates: { x: 45, y: 48 },
+      nameEn: 'Giza',
+      lat: 29.9870,
+      lng: 31.2110,
       totalCrimes: 892,
       trend: 'up',
       riskLevel: 'medium',
       categories: { theft: 345, fraud: 178, assault: 89, cybercrime: 280 },
-      prediction: { nextMonth: 950, confidence: 82 }
+      prediction: { nextMonth: 950, confidence: 82 },
+      population: '8.9M',
+      info: 'موطن الأهرامات وأبو الهول'
     },
     {
+      id: 'alexandria',
       governorate: 'الإسكندرية',
-      coordinates: { x: 35, y: 25 },
+      nameEn: 'Alexandria',
+      lat: 31.2001,
+      lng: 29.9187,
       totalCrimes: 634,
       trend: 'stable',
       riskLevel: 'low',
       categories: { theft: 234, fraud: 145, assault: 67, cybercrime: 188 },
-      prediction: { nextMonth: 640, confidence: 91 }
+      prediction: { nextMonth: 640, confidence: 91 },
+      population: '5.2M',
+      info: 'عروس البحر المتوسط'
     },
     {
+      id: 'aswan',
       governorate: 'أسوان',
-      coordinates: { x: 55, y: 85 },
+      nameEn: 'Aswan',
+      lat: 24.0889,
+      lng: 32.8998,
       totalCrimes: 156,
       trend: 'down',
       riskLevel: 'low',
       categories: { theft: 67, fraud: 34, assault: 23, cybercrime: 32 },
-      prediction: { nextMonth: 145, confidence: 89 }
+      prediction: { nextMonth: 145, confidence: 89 },
+      population: '1.5M',
+      info: 'مدينة النوبة والسد العالي'
     },
     {
+      id: 'luxor',
       governorate: 'الأقصر',
-      coordinates: { x: 52, y: 80 },
+      nameEn: 'Luxor',
+      lat: 25.6872,
+      lng: 32.6396,
       totalCrimes: 203,
       trend: 'stable',
       riskLevel: 'low',
       categories: { theft: 89, fraud: 45, assault: 34, cybercrime: 35 },
-      prediction: { nextMonth: 205, confidence: 85 }
+      prediction: { nextMonth: 205, confidence: 85 },
+      population: '1.3M',
+      info: 'متحف مفتوح للآثار الفرعونية'
     },
     {
+      id: 'portsaid',
       governorate: 'بورسعيد',
-      coordinates: { x: 45, y: 20 },
+      nameEn: 'Port Said',
+      lat: 31.2653,
+      lng: 32.3019,
       totalCrimes: 287,
       trend: 'up',
       riskLevel: 'medium',
       categories: { theft: 123, fraud: 67, assault: 45, cybercrime: 52 },
-      prediction: { nextMonth: 310, confidence: 78 }
+      prediction: { nextMonth: 310, confidence: 78 },
+      population: '0.75M',
+      info: 'مدينة قناة السويس'
     },
     {
+      id: 'ismailia',
       governorate: 'الإسماعيلية',
-      coordinates: { x: 48, y: 22 },
+      nameEn: 'Ismailia',
+      lat: 30.5965,
+      lng: 32.2715,
       totalCrimes: 234,
       trend: 'down',
       riskLevel: 'low',
       categories: { theft: 98, fraud: 56, assault: 34, cybercrime: 46 },
-      prediction: { nextMonth: 220, confidence: 83 }
+      prediction: { nextMonth: 220, confidence: 83 },
+      population: '1.4M',
+      info: 'مدينة الجمال والسحر'
     },
     {
+      id: 'minya',
       governorate: 'المنيا',
-      coordinates: { x: 48, y: 65 },
+      nameEn: 'Minya',
+      lat: 28.1099,
+      lng: 30.7503,
       totalCrimes: 345,
       trend: 'up',
       riskLevel: 'medium',
       categories: { theft: 145, fraud: 78, assault: 56, cybercrime: 66 },
-      prediction: { nextMonth: 370, confidence: 80 }
+      prediction: { nextMonth: 370, confidence: 80 },
+      population: '5.5M',
+      info: 'عروس الصعيد'
     }
   ];
 
@@ -279,42 +326,30 @@ export function ComprehensiveMapPage() {
         {/* Interactive Map */}
         <View style={styles.mapSection}>
           <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>خريطة مصر التفاعلية</Text>
-          <View style={[styles.mapContainer, { backgroundColor: palette.background.primary }]}>
-            {/* Egypt Map Outline */}
-            <View style={[styles.egyptMap, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}>
-              {filteredData.map((data) => {
-                const TrendIcon = getTrendIcon(data.trend);
-                const pointSize = getMapPointSize(data);
-                const crimeCount = getFilteredCrimeCount(data);
-                return (
-                  <TouchableOpacity
-                    key={data.governorate}
-                    style={[
-                      styles.mapPoint,
-                      {
-                        left: `${data.coordinates.x}%`,
-                        top: `${data.coordinates.y}%`,
-                        backgroundColor: getRiskColor(data.riskLevel),
-                        width: pointSize,
-                        height: pointSize,
-                        borderRadius: pointSize / 2,
-                      },
-                      selectedGovernorate === data.governorate && styles.mapPointSelected
-                    ]}
-                    onPress={() => setSelectedGovernorate(
-                      selectedGovernorate === data.governorate ? null : data.governorate
-                    )}
-                  >
-                    <MapPin size={Math.max(12, pointSize * 0.4)} color="#FFFFFF" />
-                    <View style={styles.crimeCountBadge}>
-                      <Text style={styles.crimeCountText}>
-                        {crimeCount > 999 ? `${Math.floor(crimeCount/1000)}k` : crimeCount}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <View style={[styles.mapContainer, { backgroundColor: palette.background.primary }]}> 
+            <CrimeMap height={460} data={filteredData.map(d => ({
+              id: d.id,
+              name: d.governorate,
+              nameEn: d.nameEn,
+              lat: d.lat,
+              lng: d.lng,
+              population: d.population,
+              info: d.info,
+              riskLevel: d.riskLevel,
+              totalCrimes: ((): number => {
+                // Respect selectedFilter in the number displayed on the marker
+                switch (selectedFilter) {
+                  case 'theft': return d.categories.theft;
+                  case 'fraud': return d.categories.fraud;
+                  case 'assault': return d.categories.assault;
+                  case 'cybercrime': return d.categories.cybercrime;
+                  default: return d.totalCrimes;
+                }
+              })(),
+              trend: d.trend,
+              categories: d.categories,
+            }))} />
+ 
 
             {/* Legend */}
             <View style={styles.mapLegend}>

@@ -13,7 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Search as SearchIcon, ChevronDown, ChevronUp, Moon, Sun } from 'lucide-react-native';
+import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Search as SearchIcon, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { db, storage } from '@/firebaseConfig';
 import {
   collection,
@@ -63,7 +63,7 @@ interface Message {
 }
 
 export function ChatPage() {
-  const { mode, palette, toggle } = useTheme();
+  const { palette } = useTheme();
   // Persona prompts (Arabic)
   const personaPrompts: Record<PersonaId, { label: string; system: string; intake: string } > = {
     legal: {
@@ -732,26 +732,6 @@ export function ChatPage() {
                     <Text style={styles.headerSubtitle}>اختر نوع المساعدة ثم ابدأ المحادثة</Text>
                   )}
                 </View>
-                <TouchableOpacity
-                  onPress={toggle}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: palette.border.default,
-                    backgroundColor: palette.background.secondary,
-                    marginLeft: 8,
-                  }}
-                >
-                  {mode === 'dark' ? (
-                    <Sun size={18} color={palette.text.secondary} />
-                  ) : (
-                    <Moon size={18} color={palette.text.secondary} />
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
 

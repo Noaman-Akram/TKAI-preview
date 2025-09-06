@@ -19,8 +19,8 @@ export function SettingsPage() {
   const [highAccuracy, setHighAccuracy] = useState(true);
   const [autoScan, setAutoScan] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [openAiApiKey, setOpenAiApiKey] = useState('sk_c0eeddd11fe2a871c4a09190f4c3a196d1383ad6021225beeaxh');
-  const [elevenLabsApiKey, setElevenLabsApiKey] = useState('sk_c0eeddd11fe2a871c4a09190f4c3a196d1383ad6021225beeaxh');
+  const [openAiApiKey, setOpenAiApiKey] = useState(process.env.EXPO_PUBLIC_OPENAI_API_KEY || '');
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState(process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY || '');
   const [showElevenLabsModal, setShowElevenLabsModal] = useState(false);
 
   const settingsSections = [

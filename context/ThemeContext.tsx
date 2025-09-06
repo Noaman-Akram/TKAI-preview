@@ -38,8 +38,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue>({ mode: 'light', palette: light, toggle: () => {}, setMode: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Default to dark mode per request
-  const [mode, setMode] = useState<ThemeMode>('dark');
+  const [mode, setMode] = useState<ThemeMode>('light');
   const palette = useMemo(() => (mode === 'dark' ? dark : light), [mode]);
   const value = useMemo(() => ({ mode, palette, toggle: () => setMode(mode === 'dark' ? 'light' : 'dark'), setMode }), [mode, palette]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
