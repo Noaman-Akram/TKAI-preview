@@ -841,15 +841,16 @@ export function ChatPage() {
                   <Text style={styles.emptySubtitle}>اختر أحد الأدوار التالية لبدء المحادثة</Text>
                 )}
                 <View style={styles.inlinePersonaRow}>
-                  <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('legal')}>
-                    <View style={styles.inlinePersonaIcon}><FileText size={20} color={Colors.primary[600]} /></View>
-                    <Text style={styles.inlinePersonaTitle}>كاتب التقارير القانونية</Text>
-                    <Text style={styles.inlinePersonaDesc}>صياغة محاضر وتقارير رسمية</Text>
-                  </TouchableOpacity>
+
                   <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('fake_news')}>
                     <View style={styles.inlinePersonaIcon}><SearchIcon size={20} color={Colors.primary[600]} /></View>
                     <Text style={styles.inlinePersonaTitle}>محلل الأخبار المُضلِّلة</Text>
                     <Text style={styles.inlinePersonaDesc}>تحقق مهني من المصداقية</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('legal')}>
+                    <View style={styles.inlinePersonaIcon}><FileText size={20} color={Colors.primary[600]} /></View>
+                    <Text style={styles.inlinePersonaTitle}>كاتب المحاضر والتقارير القانونية</Text>
+                    <Text style={styles.inlinePersonaDesc}>صياغة محاضر وتقارير رسمية</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('general')}>
                     <View style={styles.inlinePersonaIcon}><Bot size={20} color={Colors.primary[600]} /></View>

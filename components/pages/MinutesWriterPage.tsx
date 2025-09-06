@@ -15,10 +15,6 @@ import {
   Share, 
   Eye, 
   Sparkles, 
-  Copy,
-  RotateCcw,
-  Settings,
-  Palette,
   Mic
 } from 'lucide-react-native';
 import { SpeechToText } from '@/components/SpeechToText';
@@ -28,62 +24,66 @@ export function MinutesWriterPage() {
   const [minutesContent, setMinutesContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState('meeting-minutes');
+  const [selectedTemplate, setSelectedTemplate] = useState('theft');
   const [showSpeechToText, setShowSpeechToText] = useState(false);
+  // Police report specific fields
+  const [department, setDepartment] = useState('قسم مصر الجديدة');
+  const [reporterName, setReporterName] = useState('');
+  const [reporterNID, setReporterNID] = useState('');
+  const [reporterPhone, setReporterPhone] = useState('');
+  const [incidentDate, setIncidentDate] = useState(new Date().toLocaleDateString('ar-EG'));
+  const [incidentTime, setIncidentTime] = useState(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }));
+  const [incidentPlace, setIncidentPlace] = useState('');
+  const [caseSummary, setCaseSummary] = useState('');
+  const [witnesses, setWitnesses] = useState('');
+  const [seizedItems, setSeizedItems] = useState('');
+  const [actionsTaken, setActionsTaken] = useState('');
 
   const templates = [
-    { id: 'meeting-minutes', name: 'محضر اجتماع', description: 'قالب لكتابة محاضر الاجتماعات' },
-    { id: 'board-meeting', name: 'محضر مجلس إدارة', description: 'قالب لمحاضر مجالس الإدارة' },
-    { id: 'committee-minutes', name: 'محضر لجنة', description: 'قالب لمحاضر اللجان' },
-    { id: 'workshop-minutes', name: 'محضر ورشة عمل', description: 'قالب لمحاضر ورش العمل' },
+    { id: 'theft', name: 'محضر سرقة', description: 'إثبات واقعة سرقة منقولات/نقود/سيارة' },
+    { id: 'public-funds', name: 'محضر أموال عامة', description: 'بلاغات تتعلق بالمال العام والاختلاس' },
+    { id: 'fraud', name: 'محضر نصب/احتيال', description: 'التدليس والاستيلاء على أموال الغير' },
+    { id: 'assault', name: 'محضر مشاجرة/اعتداء', description: 'إصابات وجروح وتقرير طبي' },
+    { id: 'traffic', name: 'محضر مرور', description: 'تصادم/هروب/إتلاف ممتلكات' },
+    { id: 'missing', name: 'محضر غياب/فقد', description: 'بلاغ عن شخص مفقود' },
+    { id: 'cybercrime', name: 'محضر جرائم إلكترونية', description: 'ابتزاز/اختراق/نشر غير مشروع' },
   ];
 
   const handleGenerateContent = () => {
     setIsGenerating(true);
-    // Simulate AI content generation
     setTimeout(() => {
-      setMinutesContent(`# محضر الاجتماع
+      const dept = department || 'قسم الشرطة';
+      const name = reporterName || '—';
+      const nid = reporterNID || '—';
+      const phone = reporterPhone || '—';
+      const date = incidentDate || new Date().toLocaleDateString('ar-EG');
+      const time = incidentTime || new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+      const place = incidentPlace || '—';
+      const summary = caseSummary || '—';
+      const wit = witnesses || 'لا يوجد';
+      const seized = seizedItems || 'لا يوجد';
+      const acts = actionsTaken || 'جارٍ العرض لاتخاذ اللازم قانونًا';
 
-## معلومات الاجتماع
-- **التاريخ**: ${new Date().toLocaleDateString('ar-SA')}
-- **الوقت**: ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-- **المكان**: قاعة الاجتماعات الرئيسية
-- **رئيس الاجتماع**: [اسم رئيس الاجتماع]
-
-## الحضور
-- [اسم المشارك الأول] - [المنصب]
-- [اسم المشارك الثاني] - [المنصب]
-- [اسم المشارك الثالث] - [المنصب]
-
-## جدول الأعمال
-1. افتتاح الاجتماع
-2. مراجعة محضر الاجتماع السابق
-3. البنود الرئيسية للمناقشة
-4. القرارات والتوصيات
-5. إقفال الاجتماع
-
-## المناقشات والقرارات
-### البند الأول: [عنوان البند]
-**المناقشة**: تم مناقشة...
-**القرار**: تم الاتفاق على...
-
-### البند الثاني: [عنوان البند]
-**المناقشة**: تم مناقشة...
-**القرار**: تم الاتفاق على...
-
-## التوصيات والإجراءات المطلوبة
-- [ ] إجراء أول - المسؤول: [الاسم] - الموعد النهائي: [التاريخ]
-- [ ] إجراء ثاني - المسؤول: [الاسم] - الموعد النهائي: [التاريخ]
-
-## موعد الاجتماع القادم
-**التاريخ**: [تاريخ الاجتماع القادم]
-**الوقت**: [وقت الاجتماع القادم]
-
----
-**كاتب المحضر**: [اسم كاتب المحضر]
-**تاريخ الإعداد**: ${new Date().toLocaleDateString('ar-SA')}`);
+      const header = `محضر رقم [____] لسنة [20__] — إداري ${dept}`;
+      const complainant = `المبلغ: السيد/ ${name} — رقم قومي: ${nid} — هاتف: ${phone}`;
+      const incident = `بتاريخ ${date} وفي تمام الساعة ${time} بدائرة ${dept} وبمكان الواقعة: ${place}، قرر المبلغ الآتي:\n${summary}`;
+      const extras: Record<string, string> = {
+        theft: 'موضوع البلاغ: واقعة سرقة (منقولات/نقود/سيارة). تم توجيه المبلغ لبيان المفقودات على وجه الدقة، وإرفاق ما يثبت الملكية إن وجد.',
+        'public-funds': 'موضوع البلاغ: شبهة اعتداء على المال العام/اختلاس. تم إحالة الأوراق للإدارة العامة لمباحث الأموال العامة للفحص.',
+        fraud: 'موضوع البلاغ: واقعة نصب/احتيال بطريق التدليس والاستيلاء. جارٍ تحديد الوسائل والأدلة الرقمية الداعمة.',
+        assault: 'موضوع البلاغ: مشاجرة/اعتداء بالضرب نتج عنه إصابات. أُخطرت الإسعاف وتم طلب تقرير طبي مبدئي لتحديد مدة العجز.',
+        traffic: 'موضوع البلاغ: حادث مروري (تصادم/هروب/إتلاف ممتلكات). تم إخطار مرور القطاع وتحديد اتجاه السير ومكان الكاميرات القريبة.',
+        missing: 'موضوع البلاغ: غياب/فقد شخص. تم تدوين أوصاف المفقود وملابسه الأخيرة، وإخطار الأقسام والمستشفيات والنيابات المختصة.',
+        cybercrime: 'موضوع البلاغ: جريمة إلكترونية (ابتزاز/اختراق/نشر). تم توجيه المبلغ لحفظ الأدلة الرقمية، وإخطار مباحث الإنترنت لاتخاذ اللازم.',
+      };
+      const witnessesBlock = `الشهود: ${wit}`;
+      const seizedBlock = `المضبوطات/الأحراز: ${seized}`;
+      const actions = `الإجراءات المتخذة: ${acts}`;
+      const footer = `تحرر عن ذلك المحضر لعرضه على النيابة العامة المختصة.\nاسم مُحرر المحضر: [ـــــ] — الوظيفة: [ـــــ]`;
+      const body = [header, '', complainant, incident, extras[selectedTemplate] || '', witnessesBlock, seizedBlock, actions, '', footer].join('\n');
+      setMinutesContent(body);
       setIsGenerating(false);
-    }, 2000);
+    }, 700);
   };
 
   const handleTranscriptionComplete = (transcribedText: string) => {
@@ -95,31 +95,22 @@ export function MinutesWriterPage() {
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Download size={18} color="#6B7280" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <Share size={18} color="#6B7280" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => setShowPreview(true)}
-            >
-              <Eye size={18} color="#6B7280" />
+            <TouchableOpacity style={styles.actionButton} onPress={() => setShowPreview(true)}>
+              {Eye ? <Eye size={18} color="#6B7280" /> : <Text>معاينة</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-              <Save size={18} color="#FFFFFF" />
+              {Save ? <Save size={18} color="#FFFFFF" /> : <Text style={{color:'#fff'}}>حفظ</Text>}
             </TouchableOpacity>
           </View>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>كاتب المحاضر الذكي</Text>
-            <Text style={styles.subtitle}>إنشاء محاضر احترافية بمساعدة الذكاء الاصطناعي</Text>
+            <Text style={styles.title}>كاتب محاضر الشرطة الذكي</Text>
+            <Text style={styles.subtitle}>نماذج جاهزة لمحاضر أقسام الشرطة المصرية — واجهة بسيطة وواضحة</Text>
           </View>
         </View>
 
-        {/* Template Selection */}
+        {/* Police Categories */}
         <View style={styles.templateSection}>
-          <Text style={styles.sectionTitle}>اختر قالب المحضر</Text>
+          <Text style={styles.sectionTitle}>نوع المحضر</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templatesScroll}>
             {templates.map((template) => (
               <TouchableOpacity
@@ -130,10 +121,7 @@ export function MinutesWriterPage() {
                 ]}
                 onPress={() => setSelectedTemplate(template.id)}
               >
-                <FileText 
-                  size={24} 
-                  color={selectedTemplate === template.id ? '#10B981' : '#6B7280'} 
-                />
+                {FileText ? <FileText size={24} color={selectedTemplate === template.id ? '#10B981' : '#6B7280'} /> : null}
                 <Text style={[
                   styles.templateName,
                   selectedTemplate === template.id && styles.templateNameActive
@@ -146,22 +134,45 @@ export function MinutesWriterPage() {
           </ScrollView>
         </View>
 
-        {/* Minutes Title */}
+        {/* Minimal Form */}
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>عنوان المحضر</Text>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="أدخل عنوان المحضر..."
-            placeholderTextColor="#9CA3AF"
-            value={minutesTitle}
-            onChangeText={setMinutesTitle}
-            textAlign="right"
-          />
+          <Text style={styles.inputLabel}>القسم</Text>
+          <TextInput style={styles.titleInput} placeholder="مثال: قسم مصر الجديدة" placeholderTextColor="#9CA3AF" value={department} onChangeText={setDepartment} textAlign="right" />
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formItem}> 
+            <Text style={styles.inputLabel}>اسم المبلغ</Text>
+            <TextInput style={styles.input} placeholder="الاسم الثلاثي" placeholderTextColor="#9CA3AF" value={reporterName} onChangeText={setReporterName} textAlign="right" />
+          </View>
+          <View style={styles.formItem}> 
+            <Text style={styles.inputLabel}>الرقم القومي</Text>
+            <TextInput style={styles.input} placeholder="14 رقمًا" placeholderTextColor="#9CA3AF" value={reporterNID} onChangeText={setReporterNID} textAlign="right" keyboardType="number-pad" />
+          </View>
+          <View style={styles.formItem}> 
+            <Text style={styles.inputLabel}>الهاتف</Text>
+            <TextInput style={styles.input} placeholder="01XXXXXXXXX" placeholderTextColor="#9CA3AF" value={reporterPhone} onChangeText={setReporterPhone} textAlign="right" keyboardType="phone-pad" />
+          </View>
+          <View style={styles.formItem}> 
+            <Text style={styles.inputLabel}>تاريخ الواقعة</Text>
+            <TextInput style={styles.input} placeholder="اليوم/الشهر/السنة" placeholderTextColor="#9CA3AF" value={incidentDate} onChangeText={setIncidentDate} textAlign="right" />
+          </View>
+          <View style={styles.formItem}> 
+            <Text style={styles.inputLabel}>وقت الواقعة</Text>
+            <TextInput style={styles.input} placeholder="الساعة:الدقيقة" placeholderTextColor="#9CA3AF" value={incidentTime} onChangeText={setIncidentTime} textAlign="right" />
+          </View>
+          <View style={[styles.formItem, { flexBasis: '100%' }]}> 
+            <Text style={styles.inputLabel}>مكان الواقعة</Text>
+            <TextInput style={styles.input} placeholder="العنوان/المَعْلَم" placeholderTextColor="#9CA3AF" value={incidentPlace} onChangeText={setIncidentPlace} textAlign="right" />
+          </View>
+        </View>
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>ملخص الواقعة</Text>
+          <TextInput style={[styles.titleInput, { minHeight: 90 }]} placeholder="أكتب ملخصًا واضحًا للواقعة" placeholderTextColor="#9CA3AF" value={caseSummary} onChangeText={setCaseSummary} textAlign="right" multiline />
         </View>
 
         {/* AI Generation Tools */}
         <View style={styles.aiToolsSection}>
-          <Text style={styles.sectionTitle}>أدوات الذكاء الاصطناعي</Text>
+          <Text style={styles.sectionTitle}>إنشاء المحضر</Text>
           <View style={styles.aiToolsGrid}>
             <TouchableOpacity 
               style={styles.aiTool}
@@ -174,26 +185,11 @@ export function MinutesWriterPage() {
               </Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.aiTool}>
-              <Copy size={20} color="#10B981" />
-              <Text style={styles.aiToolText}>تحسين النص</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.aiTool}>
-              <RotateCcw size={20} color="#10B981" />
-              <Text style={styles.aiToolText}>إعادة صياغة</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.aiTool}>
-              <Palette size={20} color="#10B981" />
-              <Text style={styles.aiToolText}>تنسيق</Text>
-            </TouchableOpacity>
-            
             <TouchableOpacity 
               style={styles.aiTool}
               onPress={() => setShowSpeechToText(!showSpeechToText)}
             >
-              <Mic size={20} color="#10B981" />
+              {Mic ? <Mic size={20} color="#10B981" /> : null}
               <Text style={styles.aiToolText}>تسجيل صوتي</Text>
             </TouchableOpacity>
           </View>
@@ -371,6 +367,8 @@ const styles = StyleSheet.create({
   inputSection: {
     marginBottom: 24,
   },
+  formGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
+  formItem: { flexGrow: 1, flexBasis: '48%' },
   inputLabel: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
@@ -382,6 +380,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 16,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    textAlign: 'right',
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#111827',
