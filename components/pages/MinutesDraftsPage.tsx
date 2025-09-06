@@ -7,48 +7,68 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { FileText, CreditCard as Edit, Trash2, Share, Clock, Search, Filter, Plus, Eye } from 'lucide-react-native';
+import { FileText, CreditCard as Edit, Trash2, Share, Clock, Search, Filter, Plus, Eye, Calendar, User, MapPin, AlertCircle } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 export function MinutesDraftsPage() {
+  const { palette } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   const drafts = [
     {
-      id: 1,
-      title: 'محضر اجتماع فريق التطوير',
-      content: 'محضر اجتماع فريق التطوير الأسبوعي...',
-      lastModified: '2024-01-15T10:30:00',
-      wordCount: 850,
+      id: 101,
+      title: 'إداري قسم مصر الجديدة — محضر سرقة منقولات',
+      content: 'المبلغ: السيد/ م.أ، قرر بسرقة حقيبته من داخل سيارته أثناء التوقف أمام مول سيتي ستارز، وبداخلها هاتف محمول ومبلغ نقدي 4200 جنيه وبطاقة رقم قومي. تم توجيهه لحصر المفقودات وتقديم ما يثبت الملكية، وجارِ تفريغ كاميرات المراقبة بالمنطقة.',
+      lastModified: '2025-09-05T10:30:00',
+      wordCount: 210,
       status: 'draft',
-      category: 'meeting'
+      category: 'theft'
     },
     {
-      id: 2,
-      title: 'محضر مجلس الإدارة الشهري',
-      content: 'محضر الاجتماع الشهري لمجلس الإدارة...',
-      lastModified: '2024-01-14T15:45:00',
-      wordCount: 1200,
+      id: 102,
+      title: 'جنح قسم الدقي — محضر نصب عبر تحويلات بنكية',
+      content: 'قررت السيدة/ ن.س أنها تعرضت لواقعة نصب من حساب عبر تطبيق مراسلة ادعى توظيف الأموال بعائد شهري، وتم تحويل مبالغ بإجمالي 65 ألف جنيه. جارٍ فحص الأرقام والحسابات وإخطار مباحث الأموال العامة لاتخاذ اللازم.',
+      lastModified: '2025-09-04T18:15:00',
+      wordCount: 180,
       status: 'review',
-      category: 'board'
+      category: 'fraud'
     },
     {
-      id: 3,
-      title: 'ملخص ورشة عمل التدريب',
-      content: 'ملخص شامل لورشة عمل التدريب على النظام الجديد...',
-      lastModified: '2024-01-13T09:15:00',
-      wordCount: 650,
+      id: 103,
+      title: 'إداري قسم شبرا — محضر مشاجرة وإصابة',
+      content: 'تحرير محضر بالمشاجرة بين طرفين أمام محطة مترو شبرا، نتج عنها إصابة سطحية باليد اليمنى لأحد الأطراف. تم طلب تقرير طبي مبدئي وتحديد مدة العجز وإرفاق بيانات الشهود.',
+      lastModified: '2025-09-03T22:40:00',
+      wordCount: 140,
       status: 'draft',
-      category: 'workshop'
+      category: 'assault'
     },
     {
-      id: 4,
-      title: 'محضر لجنة المراجعة',
-      content: 'محضر اجتماع لجنة المراجعة الداخلية...',
-      lastModified: '2024-01-12T14:20:00',
-      wordCount: 420,
+      id: 104,
+      title: 'إداري قسم المعادي — محضر جرائم إلكترونية (ابتزاز)',
+      content: 'قرر المبلغ/ ع.ع بتعرضه لابتزاز إلكتروني عبر منصة اجتماعية وتهديد بنشر صور خاصة. تم توجيهه لحفظ الأدلة الرقمية (رسائل/روابط/سكرين شوت)، وجارٍ إخطار مباحث الإنترنت واتخاذ الإجراءات القانونية.',
+      lastModified: '2025-09-02T11:20:00',
+      wordCount: 165,
       status: 'completed',
-      category: 'committee'
+      category: 'cybercrime'
+    },
+    {
+      id: 105,
+      title: 'إداري قسم مدينة نصر أول — محضر فقد بطاقة رقم قومي',
+      content: 'أبلغ السيد/ ك.م عن فقد بطاقة الرقم القومي بمحطة الحافلات بمدينة نصر. تم إثبات الحالة وإفهامه بالإجراءات اللازمة لاستخراج بدل فاقد وإخطار الجهات المعنية حال العثور.',
+      lastModified: '2025-09-01T09:05:00',
+      wordCount: 110,
+      status: 'draft',
+      category: 'missing'
+    },
+    {
+      id: 106,
+      title: 'مرور مصر الجديدة — محضر تصادم بسيط دون إصابات',
+      content: 'وقع تصادم بين سيارتين بشارع الثورة دون إصابات، وحدث تلفيات طفيفة بالمصد الخلفي. تم عمل معاينة مكانية وإفادة السائقين بإجراءات التأمين والإصلاح، وجارٍ مراجعة كاميرات الإشارة.',
+      lastModified: '2025-08-30T16:25:00',
+      wordCount: 120,
+      status: 'review',
+      category: 'traffic'
     },
   ];
 
@@ -57,6 +77,12 @@ export function MinutesDraftsPage() {
     { id: 'draft', name: 'مسودات' },
     { id: 'review', name: 'قيد المراجعة' },
     { id: 'completed', name: 'مكتملة' },
+    { id: 'theft', name: 'سرقة' },
+    { id: 'fraud', name: 'نصب' },
+    { id: 'assault', name: 'اعتداء' },
+    { id: 'traffic', name: 'مرور' },
+    { id: 'missing', name: 'غياب/فقد' },
+    { id: 'cybercrime', name: 'إلكترونية' },
   ];
 
   const getStatusColor = (status: string) => {
@@ -80,289 +106,365 @@ export function MinutesDraftsPage() {
   const filteredDrafts = drafts.filter(draft => {
     const matchesSearch = draft.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          draft.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedFilter === 'all' || draft.status === selectedFilter;
+    const matchesStatus = ['all','draft','review','completed'].includes(selectedFilter) ? (selectedFilter === 'all' || draft.status === selectedFilter) : true;
+    const matchesCategory = ['theft','fraud','assault','traffic','missing','cybercrime'].includes(selectedFilter) ? draft.category === selectedFilter : true;
+    const matchesFilter = matchesStatus && matchesCategory;
     return matchesSearch && matchesFilter;
   });
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.newDraftButton}>
-            <Plus size={20} color="#FFFFFF" />
+    <View style={[styles.container, { backgroundColor: palette.background.secondary }]}>
+      {/* Header Section */}
+      <View style={[styles.headerSection, { backgroundColor: palette.background.primary }]}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={[styles.newDraftButton, { backgroundColor: palette.primary[500] }]}>
+            <Plus size={18} color="#FFFFFF" />
             <Text style={styles.newDraftButtonText}>مسودة جديدة</Text>
           </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>مسودات المحاضر</Text>
-            <Text style={styles.subtitle}>إدارة وتنظيم مسودات المحاضر والاجتماعات</Text>
+          <View style={styles.headerInfo}>
+            <Text style={[styles.pageTitle, { color: palette.text.primary }]}>مسودات المحاضر</Text>
+            <Text style={[styles.pageSubtitle, { color: palette.text.secondary }]}>
+              إدارة وتنظيم مسودات المحاضر القانونية
+            </Text>
           </View>
         </View>
 
-        {/* Search and Filter */}
-        <View style={styles.searchSection}>
-          <View style={styles.searchContainer}>
-            <Search size={20} color="#6B7280" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="البحث في المسودات..."
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              textAlign="right"
-            />
+        {/* Stats Overview */}
+        <View style={styles.statsOverview}>
+          <View style={[styles.statItem, { backgroundColor: palette.background.secondary }]}>
+            <Text style={[styles.statNumber, { color: palette.primary[500] }]}>6</Text>
+            <Text style={[styles.statLabel, { color: palette.text.secondary }]}>إجمالي المسودات</Text>
           </View>
-          
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-            {filters.map((filter) => (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.filterChip,
-                  selectedFilter === filter.id && styles.filterChipActive
-                ]}
-                onPress={() => setSelectedFilter(filter.id)}
-              >
-                <Text style={[
-                  styles.filterText,
-                  selectedFilter === filter.id && styles.filterTextActive
-                ]}>
-                  {filter.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={[styles.statItem, { backgroundColor: palette.background.secondary }]}>
+            <Text style={[styles.statNumber, { color: palette.success[500] }]}>2</Text>
+            <Text style={[styles.statLabel, { color: palette.text.secondary }]}>مكتملة</Text>
+          </View>
+          <View style={[styles.statItem, { backgroundColor: palette.background.secondary }]}>
+            <Text style={[styles.statNumber, { color: "#F59E0B" }]}>3</Text>
+            <Text style={[styles.statLabel, { color: palette.text.secondary }]}>مسودات</Text>
+          </View>
+          <View style={[styles.statItem, { backgroundColor: palette.background.secondary }]}>
+            <Text style={[styles.statNumber, { color: palette.primary[600] }]}>1</Text>
+            <Text style={[styles.statLabel, { color: palette.text.secondary }]}>قيد المراجعة</Text>
+          </View>
         </View>
+      </View>
 
-        {/* Drafts List */}
-        <View style={styles.draftsList}>
-          {filteredDrafts.map((draft) => (
-            <View key={draft.id} style={styles.draftCard}>
-              <View style={styles.draftHeader}>
-                <View style={styles.draftActions}>
-                  <TouchableOpacity style={styles.draftAction}>
-                    <Eye size={16} color="#6B7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.draftAction}>
-                    <Share size={16} color="#6B7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.draftAction}>
-                    <Trash2 size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(draft.status) + '20' }]}>
-                  <Text style={[styles.statusText, { color: getStatusColor(draft.status) }]}>
-                    {getStatusText(draft.status)}
-                  </Text>
-                </View>
-              </View>
-              
-              <Text style={styles.draftTitle}>{draft.title}</Text>
-              <Text style={styles.draftPreview} numberOfLines={2}>
-                {draft.content}
+      {/* Search and Filter Bar */}
+      <View style={[styles.searchBar, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
+        <View style={[styles.searchContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}>
+          <Search size={18} color={palette.text.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: palette.text.primary }]}
+            placeholder="البحث في المسودات..."
+            placeholderTextColor={palette.text.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            textAlign="right"
+          />
+        </View>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter.id}
+              style={[
+                styles.filterChip,
+                { 
+                  backgroundColor: selectedFilter === filter.id ? palette.primary[500] : palette.background.secondary,
+                  borderColor: selectedFilter === filter.id ? palette.primary[500] : palette.border.default
+                }
+              ]}
+              onPress={() => setSelectedFilter(filter.id)}
+            >
+              <Text style={[
+                styles.filterText,
+                { color: selectedFilter === filter.id ? '#FFFFFF' : palette.text.secondary }
+              ]}>
+                {filter.name}
               </Text>
-              
-              <View style={styles.draftMeta}>
-                <Text style={styles.wordCount}>{draft.wordCount} كلمة</Text>
-                <View style={styles.lastModified}>
-                  <Clock size={14} color="#9CA3AF" />
-                  <Text style={styles.lastModifiedText}>
-                    {new Date(draft.lastModified).toLocaleDateString('ar-SA')}
-                  </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Grid Layout */}
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.gridContainer}>
+          {filteredDrafts.map((draft) => (
+            <View key={draft.id} style={[styles.draftCard, { backgroundColor: palette.background.primary, borderColor: palette.border.default }]}>
+              {/* Card Header */}
+              <View style={styles.cardHeader}>
+                <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(draft.status) }]} />
+                <View style={styles.cardActions}>
+                  <TouchableOpacity style={[styles.actionButton, { backgroundColor: palette.background.secondary }]}>
+                    <Eye size={14} color={palette.text.muted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, { backgroundColor: palette.background.secondary }]}>
+                    <Share size={14} color={palette.text.muted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, { backgroundColor: palette.background.secondary }]}>
+                    <Trash2 size={14} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.editButton}>
-                <Edit size={18} color="#10B981" />
-                <Text style={styles.editButtonText}>تحرير</Text>
-              </TouchableOpacity>
+              {/* Card Content */}
+              <View style={styles.cardContent}>
+                <Text style={[styles.draftTitle, { color: palette.text.primary }]} numberOfLines={2}>
+                  {draft.title}
+                </Text>
+                <Text style={[styles.draftPreview, { color: palette.text.secondary }]} numberOfLines={3}>
+                  {draft.content}
+                </Text>
+              </View>
+
+              {/* Card Footer */}
+              <View style={styles.cardFooter}>
+                <View style={styles.draftMeta}>
+                  <View style={styles.metaItem}>
+                    <Calendar size={12} color={palette.text.muted} />
+                    <Text style={[styles.metaText, { color: palette.text.muted }]}>
+                      {new Date(draft.lastModified).toLocaleDateString('ar-SA')}
+                    </Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <FileText size={12} color={palette.text.muted} />
+                    <Text style={[styles.metaText, { color: palette.text.muted }]}>
+                      {draft.wordCount} كلمة
+                    </Text>
+                  </View>
+                </View>
+                
+                <TouchableOpacity style={[styles.editButton, { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" }]}>
+                  <Edit size={14} color="#10B981" />
+                  <Text style={[styles.editButtonText, { color: "#10B981" }]}>تحرير</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Status Badge */}
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(draft.status) + '15' }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(draft.status) }]}>
+                  {getStatusText(draft.status)}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
-  content: {
-    padding: 24,
+  
+  // Header Section
+  headerSection: {
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  header: {
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 32,
+    marginBottom: 20,
   },
-  headerContent: {
+  headerInfo: {
     flex: 1,
     alignItems: 'flex-end',
   },
-  title: {
-    fontSize: 32,
+  pageTitle: {
+    fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'right',
   },
-  subtitle: {
-    fontSize: 16,
+  pageSubtitle: {
+    fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'right',
   },
   newDraftButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   newDraftButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
-    marginRight: 8,
+    marginRight: 6,
   },
-  searchSection: {
-    marginBottom: 24,
+  
+  // Stats Overview
+  statsOverview: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statItem: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+  },
+  
+  // Search Bar
+  searchBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
-    marginLeft: 12,
+    marginLeft: 10,
   },
-  filtersScroll: {
-    marginHorizontal: -12,
+  filtersContainer: {
+    marginHorizontal: -4,
   },
   filterChip: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 6,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  filterChipActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#6B7280',
   },
-  filterTextActive: {
-    color: '#FFFFFF',
+  
+  // Grid Layout
+  scrollContainer: {
+    flex: 1,
   },
-  draftsList: {
-    gap: 16,
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 16,
+    gap: 12,
   },
   draftCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    width: '48%',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    position: 'relative',
+    minHeight: 280,
   },
-  draftHeader: {
+  
+  // Card Header
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  statusBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  statusText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-  },
-  draftActions: {
+  cardActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
-  draftAction: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+  actionButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  
+  // Card Content
+  cardContent: {
+    flex: 1,
+    marginBottom: 12,
+  },
   draftTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 8,
     textAlign: 'right',
+    lineHeight: 20,
   },
   draftPreview: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 12,
+    lineHeight: 18,
     textAlign: 'right',
+  },
+  
+  // Card Footer
+  cardFooter: {
+    alignItems: 'flex-end',
   },
   draftMeta: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 12,
   },
-  wordCount: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
-  },
-  lastModified: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  lastModifiedText: {
-    fontSize: 12,
+  metaText: {
+    fontSize: 11,
     fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
-    marginRight: 4,
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0FDF4',
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    gap: 4,
   },
   editButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    color: '#10B981',
-    marginRight: 8,
+  },
+  
+  // Status Badge
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  statusText: {
+    fontSize: 10,
+    fontFamily: 'Inter-SemiBold',
   },
 });
