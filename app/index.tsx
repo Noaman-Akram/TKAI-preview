@@ -8,10 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Sidebar } from '@/components/Sidebar';
 import { MainContent } from '@/components/MainContent';
 import { TopBar } from '@/components/TopBar';
+import { useTheme } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { palette } = useTheme();
   const [activeSection, setActiveSection] = useState('chat');
   const [sidebarOpen, setSidebarOpen] = useState(width >= 1200); // Auto-open on desktop
 
@@ -22,8 +24,8 @@ export default function HomeScreen() {
   const isDesktop = width >= 1200;
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { backgroundColor: palette.background.secondary }] }>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background.secondary }]}>
         <View style={styles.layout}>
           {/* Sidebar - Always visible on desktop, overlay on mobile/tablet */}
           <Sidebar
@@ -37,6 +39,7 @@ export default function HomeScreen() {
           {/* Main Content Area */}
           <View style={[
             styles.mainArea,
+            { backgroundColor: palette.background.secondary },
             isDesktop && sidebarOpen && styles.mainAreaWithSidebar
           ]}>
             <TopBar

@@ -7,14 +7,8 @@ import {
   TextInput,
   Dimensions,
 } from 'react-native';
-import {
-  Search,
-  Menu,
-  Plus,
-  Bell,
-  Command,
-  Zap,
-} from 'lucide-react-native';
+import { Search, Menu, Plus, Bell, Command, Zap, Moon, Sun } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 interface TopBarProps {
   activeSection: string;
@@ -52,32 +46,33 @@ const sectionTitles: Record<string, string> = {
 const { width } = Dimensions.get('window');
 
 export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress }: TopBarProps) {
+  const { mode, palette, toggle } = useTheme();
   const isTablet = width >= 768;
   const isDesktop = width >= 1200;
   const isMobile = width < 768;
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
+    <View style={[styles.container, isMobile && styles.containerMobile, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
       {/* Left Section - Navigation & Search */}
       <View style={[styles.leftSection, isMobile && styles.leftSectionMobile]}>
         <TouchableOpacity
           style={[styles.menuButton, isMobile && styles.menuButtonMobile]}
           onPress={onToggleSidebar}
         >
-          <Menu size={isMobile ? 16 : 18} color="#64748B" strokeWidth={2} />
+          <Menu size={isMobile ? 16 : 18} color={palette.text.secondary} strokeWidth={2} />
         </TouchableOpacity>
         
         {!isMobile && (
-          <View style={styles.searchContainer}>
-            <Search size={16} color="#94A3B8" strokeWidth={2} />
+          <View style={[styles.searchContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }] }>
+            <Search size={16} color={palette.text.muted} strokeWidth={2} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: palette.text.primary }]}
               placeholder="البحث في المنصة..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={palette.text.muted}
             />
             <View style={styles.searchShortcut}>
-              <Command size={12} color="#94A3B8" />
-              <Text style={styles.shortcutText}>K</Text>
+              <Command size={12} color={palette.text.muted} />
+              <Text style={[styles.shortcutText, { color: palette.text.muted }]}>K</Text>
             </View>
           </View>
         )}
@@ -85,7 +80,7 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
 
       {/* Center Section - Page Title */}
       <View style={styles.centerSection}>
-        <Text style={[styles.title, isMobile && styles.titleMobile]}>
+        <Text style={[styles.title, isMobile && styles.titleMobile, { color: palette.text.primary }]}>
           {sectionTitles[activeSection] || 'AI Platform'}
         </Text>
       </View>
@@ -94,23 +89,26 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
       <View style={[styles.rightSection, isMobile && styles.rightSectionMobile]}>
         {!isMobile && (
           <>
-            <TouchableOpacity style={styles.actionButton}>
-              <Bell size={18} color="#64748B" strokeWidth={2} />
+            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}>
+              <Bell size={18} color={palette.text.secondary} strokeWidth={2} />
               <View style={styles.notificationBadge}>
                 <Text style={styles.badgeText}>3</Text>
               </View>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.primaryButton]}>
+            <TouchableOpacity style={[styles.actionButton, styles.primaryButton, { backgroundColor: palette.primary[500] }]}>
               <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
               <Text style={styles.primaryButtonText}>تحليل جديد</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]} onPress={toggle}>
+              {mode === 'dark' ? <Sun size={18} color={palette.text.secondary} /> : <Moon size={18} color={palette.text.secondary} />}
             </TouchableOpacity>
           </>
         )}
         
         <View style={styles.userSection}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>A</Text>
+          <View style={[styles.userAvatar, { backgroundColor: palette.text.primary }]}>
+            <Text style={[styles.userAvatarText, { color: palette.background.primary }]}>A</Text>
           </View>
           {!isMobile && (
             <View style={styles.userInfo}>

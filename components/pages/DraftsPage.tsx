@@ -12,6 +12,12 @@ import { FileText, CreditCard as Edit, Trash2, Share, Clock, Search, Filter, Plu
 export function DraftsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const totals = {
+    all: 4,
+    draft: 2,
+    review: 1,
+    completed: 1,
+  };
 
   const drafts = [
     {
@@ -131,6 +137,17 @@ export function DraftsPage() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+        </View>
+
+        {/* Summary Chips */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          {['all','draft','review','completed'].map((k) => (
+            <View key={k} style={{ backgroundColor: '#FFFFFF', borderRadius: 999, borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={{ fontFamily: 'Inter-Medium', color: '#111827', fontSize: 12 }}>
+                {k==='all'?'الكل':k==='draft'?'مسودات':k==='review'?'قيد المراجعة':'مكتملة'}: {totals[k as keyof typeof totals]}
+              </Text>
+            </View>
+          ))}
         </View>
 
         {/* Drafts List */}

@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MapPin, TrendingUp, TrendingDown, TriangleAlert as AlertTriangle, Shield, Eye, Filter, Calendar, ChartBar as BarChart3, Users, Clock } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,7 @@ interface CrimeData {
 }
 
 export function ComprehensiveMapPage() {
+  const { palette } = useTheme();
   const [selectedGovernorate, setSelectedGovernorate] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedTimeframe, setSelectedTimeframe] = useState('current');
@@ -216,11 +218,11 @@ export function ComprehensiveMapPage() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: palette.background.secondary }]} showsVerticalScrollIndicator={false}>
+      <View style={[styles.content, { backgroundColor: palette.background.secondary }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>الخريطة الشاملة للجرائم في مصر</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: palette.text.primary }]}>الخريطة الشاملة للجرائم في مصر</Text>
+          <Text style={[styles.subtitle, { color: palette.text.secondary }]}>
             خريطة تفاعلية تُظهر السجلات الجنائية والتاريخ والتنبؤات
           </Text>
         </View>
@@ -228,7 +230,7 @@ export function ComprehensiveMapPage() {
         {/* Filters */}
         <View style={styles.filtersSection}>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>نوع الجريمة:</Text>
+            <Text style={[styles.filterLabel, { color: palette.text.primary }]}>نوع الجريمة:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {filters.map((filter) => (
                 <TouchableOpacity
@@ -241,7 +243,7 @@ export function ComprehensiveMapPage() {
                 >
                   <Text style={[
                     styles.filterText,
-                    selectedFilter === filter.id && styles.filterTextActive
+                    { color: selectedFilter === filter.id ? palette.text.inverse : palette.text.secondary }
                   ]}>
                     {filter.name}
                   </Text>
@@ -251,7 +253,7 @@ export function ComprehensiveMapPage() {
           </View>
 
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>الفترة الزمنية:</Text>
+            <Text style={[styles.filterLabel, { color: palette.text.primary }]}>الفترة الزمنية:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {timeframes.map((timeframe) => (
                 <TouchableOpacity
@@ -264,7 +266,7 @@ export function ComprehensiveMapPage() {
                 >
                   <Text style={[
                     styles.filterText,
-                    selectedTimeframe === timeframe.id && styles.filterTextActive
+                    { color: selectedTimeframe === timeframe.id ? palette.text.inverse : palette.text.secondary }
                   ]}>
                     {timeframe.name}
                   </Text>
@@ -276,10 +278,10 @@ export function ComprehensiveMapPage() {
 
         {/* Interactive Map */}
         <View style={styles.mapSection}>
-          <Text style={styles.sectionTitle}>خريطة مصر التفاعلية</Text>
-          <View style={styles.mapContainer}>
+          <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>خريطة مصر التفاعلية</Text>
+          <View style={[styles.mapContainer, { backgroundColor: palette.background.primary }]}>
             {/* Egypt Map Outline */}
-            <View style={styles.egyptMap}>
+            <View style={[styles.egyptMap, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}>
               {filteredData.map((data) => {
                 const TrendIcon = getTrendIcon(data.trend);
                 const pointSize = getMapPointSize(data);
@@ -316,19 +318,19 @@ export function ComprehensiveMapPage() {
 
             {/* Legend */}
             <View style={styles.mapLegend}>
-              <Text style={styles.legendTitle}>مستوى المخاطر:</Text>
+              <Text style={[styles.legendTitle, { color: palette.text.primary }]}>مستوى المخاطر:</Text>
               <View style={styles.legendItems}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendColor, { backgroundColor: '#10B981' }]} />
-                  <Text style={styles.legendText}>منخفض</Text>
+                  <Text style={[styles.legendText, { color: palette.text.secondary }]}>منخفض</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendColor, { backgroundColor: '#F59E0B' }]} />
-                  <Text style={styles.legendText}>متوسط</Text>
+                  <Text style={[styles.legendText, { color: palette.text.secondary }]}>متوسط</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendColor, { backgroundColor: '#EF4444' }]} />
-                  <Text style={styles.legendText}>عالي</Text>
+                  <Text style={[styles.legendText, { color: palette.text.secondary }]}>عالي</Text>
                 </View>
               </View>
             </View>
@@ -337,16 +339,16 @@ export function ComprehensiveMapPage() {
 
         {/* Statistics Overview */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>إحصائيات عامة</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>إحصائيات عامة</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.statIcon}>
                 <BarChart3 size={24} color="#10B981" />
               </View>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statValue, { color: palette.text.primary }] }>
                 {getTotalFilteredCrimes().toLocaleString()}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text style={[styles.statLabel, { color: palette.text.secondary }] }>
                 {selectedFilter === 'all' ? 'إجمالي الجرائم' :
                  selectedFilter === 'theft' ? 'جرائم السرقة' :
                  selectedFilter === 'fraud' ? 'جرائم الاحتيال' :
@@ -356,20 +358,20 @@ export function ComprehensiveMapPage() {
               </Text>
             </View>
             
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.statIcon}>
                 {selectedTimeframe === 'current' ? 
                   <TrendingDown size={24} color="#10B981" /> :
                   <TrendingUp size={24} color="#3B82F6" />
                 }
               </View>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statValue, { color: palette.text.primary }]}>
                 {selectedTimeframe === 'current' ? '-12%' :
                  selectedTimeframe === 'last3months' ? '+8%' :
                  selectedTimeframe === 'last6months' ? '+15%' :
                  '+23%'}
               </Text>
-              <Text style={styles.statLabel}>
+              <Text style={[styles.statLabel, { color: palette.text.secondary }]}>
                 {selectedTimeframe === 'current' ? 'انخفاض هذا الشهر' :
                  selectedTimeframe === 'last3months' ? 'زيادة آخر 3 أشهر' :
                  selectedTimeframe === 'last6months' ? 'زيادة آخر 6 أشهر' :
@@ -377,20 +379,20 @@ export function ComprehensiveMapPage() {
               </Text>
             </View>
             
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.statIcon}>
                 <Shield size={24} color="#3B82F6" />
               </View>
-              <Text style={styles.statValue}>94.2%</Text>
-              <Text style={styles.statLabel}>معدل الحل</Text>
+              <Text style={[styles.statValue, { color: palette.text.primary }]}>94.2%</Text>
+              <Text style={[styles.statLabel, { color: palette.text.secondary }]}>معدل الحل</Text>
             </View>
             
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.statIcon}>
                 <AlertTriangle size={24} color="#F59E0B" />
               </View>
-              <Text style={styles.statValue}>23</Text>
-              <Text style={styles.statLabel}>مناطق عالية المخاطر</Text>
+              <Text style={[styles.statValue, { color: palette.text.primary }]}>23</Text>
+              <Text style={[styles.statLabel, { color: palette.text.secondary }]}>مناطق عالية المخاطر</Text>
             </View>
           </View>
         </View>
@@ -398,8 +400,8 @@ export function ComprehensiveMapPage() {
         {/* Selected Governorate Details */}
         {selectedData && (
           <View style={styles.detailsSection}>
-            <Text style={styles.sectionTitle}>تفاصيل {selectedData.governorate}</Text>
-            <View style={styles.detailsCard}>
+            <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>تفاصيل {selectedData.governorate}</Text>
+            <View style={[styles.detailsCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.detailsHeader}>
                 <View style={styles.trendIndicator}>
                   {React.createElement(getTrendIcon(selectedData.trend), {
@@ -414,13 +416,13 @@ export function ComprehensiveMapPage() {
                      selectedData.trend === 'down' ? 'انخفاض' : 'مستقر'}
                   </Text>
                 </View>
-                <Text style={styles.governorateName}>{selectedData.governorate}</Text>
+                <Text style={[styles.governorateName, { color: palette.text.primary }]}>{selectedData.governorate}</Text>
               </View>
 
               <View style={styles.crimeStats}>
                 <View style={styles.mainStat}>
                   <Text style={styles.mainStatValue}>{selectedData.totalCrimes.toLocaleString()}</Text>
-                  <Text style={styles.mainStatLabel}>إجمالي الجرائم</Text>
+                  <Text style={[styles.mainStatLabel, { color: palette.text.secondary }]}>إجمالي الجرائم</Text>
                 </View>
 
                 <View style={styles.categoryStats}>
@@ -445,7 +447,7 @@ export function ComprehensiveMapPage() {
                         onPress={() => setSelectedFilter(selectedFilter === category ? 'all' : category)}
                       >
                         <Text style={styles.categoryCount}>{count}</Text>
-                        <Text style={styles.categoryName}>{categoryNames[category]}</Text>
+                        <Text style={[styles.categoryName, { color: palette.text.secondary }]}>{categoryNames[category]}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -453,16 +455,16 @@ export function ComprehensiveMapPage() {
               </View>
 
               <View style={styles.predictionSection}>
-                <Text style={styles.predictionTitle}>التنبؤ للشهر القادم</Text>
+                <Text style={[styles.predictionTitle, { color: palette.text.primary }]}>التنبؤ للشهر القادم</Text>
                 <View style={styles.predictionData}>
                   <View style={styles.predictionValue}>
                     <Text style={styles.predictionNumber}>
                       {selectedData.prediction.nextMonth.toLocaleString()}
                     </Text>
-                    <Text style={styles.predictionLabel}>جريمة متوقعة</Text>
+                    <Text style={[styles.predictionLabel, { color: palette.text.secondary }]}>جريمة متوقعة</Text>
                   </View>
                   <View style={styles.confidenceIndicator}>
-                    <Text style={styles.confidenceLabel}>
+                    <Text style={[styles.confidenceLabel, { color: palette.text.secondary }]}>
                       دقة التنبؤ: {selectedData.prediction.confidence}%
                     </Text>
                     <View style={styles.confidenceBar}>
@@ -478,7 +480,7 @@ export function ComprehensiveMapPage() {
               </View>
 
               <View style={styles.riskAssessment}>
-                <Text style={styles.riskTitle}>تقييم المخاطر</Text>
+                <Text style={[styles.riskTitle, { color: palette.text.primary }]}>تقييم المخاطر</Text>
                 <View style={[
                   styles.riskBadge,
                   { backgroundColor: getRiskColor(selectedData.riskLevel) + '20' }
@@ -498,7 +500,7 @@ export function ComprehensiveMapPage() {
 
         {/* Top Governorates List */}
         <View style={styles.rankingSection}>
-          <Text style={styles.sectionTitle}>ترتيب المحافظات حسب معدل الجرائم</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>ترتيب المحافظات حسب معدل الجرائم</Text>
           <View style={styles.rankingList}>
             {filteredData
               .sort((a, b) => getFilteredCrimeCount(b) - getFilteredCrimeCount(a))
@@ -527,8 +529,8 @@ export function ComprehensiveMapPage() {
                     </View>
                     
                     <View style={styles.rankingContent}>
-                      <Text style={styles.rankingGovernorate}>{data.governorate}</Text>
-                      <Text style={styles.rankingCount}>
+                      <Text style={[styles.rankingGovernorate, { color: palette.text.primary }]}>{data.governorate}</Text>
+                      <Text style={[styles.rankingCount, { color: palette.text.secondary }]}>
                         {crimeCount.toLocaleString()} 
                         {selectedFilter === 'all' ? ' جريمة' :
                          selectedFilter === 'theft' ? ' سرقة' :
@@ -550,26 +552,26 @@ export function ComprehensiveMapPage() {
 
         {/* Insights */}
         <View style={styles.insightsSection}>
-          <Text style={styles.sectionTitle}>رؤى ذكية</Text>
-          <Text style={styles.insightsSubtitle}>
+          <Text style={[styles.sectionTitle, { color: palette.text.primary }]}>رؤى ذكية</Text>
+          <Text style={[styles.insightsSubtitle, { color: palette.text.secondary }]}>
             تحليلات مبنية على {selectedTimeframe === 'current' ? 'البيانات الحالية' :
             selectedTimeframe === 'last3months' ? 'آخر 3 أشهر' :
             selectedTimeframe === 'last6months' ? 'آخر 6 أشهر' : 'العام الماضي'}
           </Text>
           <View style={styles.insightsList}>
-            <View style={styles.insightCard}>
+            <View style={[styles.insightCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.insightIcon}>
                 <TrendingDown size={20} color="#10B981" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>
+                <Text style={[styles.insightTitle, { color: palette.text.primary }]}>
                   {selectedFilter === 'theft' ? 'تركيز على جرائم السرقة' :
                    selectedFilter === 'fraud' ? 'تركيز على جرائم الاحتيال' :
                    selectedFilter === 'assault' ? 'تركيز على جرائم الاعتداء' :
                    selectedFilter === 'cybercrime' ? 'تركيز على الجرائم الإلكترونية' :
                    'انخفاض في جرائم السرقة'}
                 </Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightText, { color: palette.text.secondary }]}>
                   {selectedFilter === 'theft' ? 'جرائم السرقة تمثل أكبر نسبة في المحافظات الحضرية' :
                    selectedFilter === 'fraud' ? 'جرائم الاحتيال في ازدياد مع التطور التكنولوجي' :
                    selectedFilter === 'assault' ? 'جرائم الاعتداء تتركز في المناطق المكتظة بالسكان' :
@@ -579,7 +581,7 @@ export function ComprehensiveMapPage() {
               </View>
             </View>
 
-            <View style={styles.insightCard}>
+            <View style={[styles.insightCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.insightIcon}>
                 {selectedTimeframe === 'current' ? 
                   <AlertTriangle size={20} color="#F59E0B" /> :
@@ -587,11 +589,11 @@ export function ComprehensiveMapPage() {
                 }
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>
+                <Text style={[styles.insightTitle, { color: palette.text.primary }]}>
                   {selectedTimeframe === 'current' ? 'ارتفاع الجرائم الإلكترونية' :
                    'اتجاهات تاريخية'}
                 </Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightText, { color: palette.text.secondary }]}>
                   {selectedTimeframe === 'current' ? 
                     'زيادة ملحوظة في الجرائم الإلكترونية بنسبة 23% في المحافظات الحضرية' :
                     `البيانات التاريخية تُظهر اتجاهات مختلفة عبر ${selectedTimeframe === 'last3months' ? '3 أشهر' :
@@ -600,13 +602,13 @@ export function ComprehensiveMapPage() {
               </View>
             </View>
 
-            <View style={styles.insightCard}>
+            <View style={[styles.insightCard, { backgroundColor: palette.background.primary }]}>
               <View style={styles.insightIcon}>
                 <Shield size={20} color="#3B82F6" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>تحسن في معدلات الحل</Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightTitle, { color: palette.text.primary }]}>تحسن في معدلات الحل</Text>
+                <Text style={[styles.insightText, { color: palette.text.secondary }]}>
                   ارتفع معدل حل القضايا إلى 94.2% بفضل التقنيات الحديثة
                 </Text>
               </View>

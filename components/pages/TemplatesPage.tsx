@@ -16,6 +16,7 @@ export function TemplatesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateContent, setNewTemplateContent] = useState('');
+  const [previewTemplate, setPreviewTemplate] = useState<null | { name: string; content: string }>(null);
 
   const templates = [
     {
@@ -136,7 +137,7 @@ export function TemplatesPage() {
             <View key={template.id} style={styles.templateCard}>
               <View style={styles.templateHeader}>
                 <View style={styles.templateActions}>
-                  <TouchableOpacity style={styles.templateAction}>
+                  <TouchableOpacity style={styles.templateAction} onPress={() => setPreviewTemplate({ name: template.name, content: template.content })}>
                     <Eye size={16} color="#6B7280" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.templateAction}>

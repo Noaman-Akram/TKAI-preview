@@ -9,32 +9,196 @@ import {
   ListRenderItemInfo,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Plus, Mic, Bot, User } from 'lucide-react-native';
+import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Search as SearchIcon, ChevronDown, ChevronUp, Moon, Sun } from 'lucide-react-native';
+import { db, storage } from '@/firebaseConfig';
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  updateDoc,
+  doc,
+  setDoc,
+  getDoc,
+} from 'firebase/firestore';
+import Markdown from 'react-native-markdown-display';
+import { ref, uploadString, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as WebBrowser from 'expo-web-browser';
+import * as FileSystem from 'expo-file-system';
 import { SpeechToText } from '@/components/SpeechToText';
 import { Colors, Typography, Spacing, BorderRadius, ButtonStyles, TextStyles, CardStyles, InputStyles } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+
+type PersonaId = 'legal' | 'fake_news' | 'general';
+
+interface Conversation {
+  id: string;
+  title: string;
+  persona: PersonaId;
+  locked?: boolean;
+  lastMessage?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
 
 interface Message {
   id: string;
   content: string;
   type: 'user' | 'assistant';
   timestamp: Date;
+  attachment?: {
+    url: string;
+    name: string;
+    contentType: string;
+    size?: number;
+  };
 }
 
 export function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'مرحباً! أنا مساعدك الذكي لكشف الأخبار المُضللة. كيف يمكنني مساعدتك اليوم؟',
-      type: 'assistant',
-      timestamp: new Date(),
-    }
-  ]);
+  const { mode, palette, toggle } = useTheme();
+  // Persona prompts (Arabic)
+  const personaPrompts: Record<PersonaId, { label: string; system: string; intake: string } > = {
+    legal: {
+      label: 'كاتب التقارير القانونية',
+      system: `
+أنت "كاتب تقارير قانونية" تابع لوزارة الداخلية المصرية. دورك إعداد محاضر وتقارير قانونية رسمية بصياغة عربية فصحى واضحة ومحايدة، مع الالتزام بالأطر القانونية المصرية، مراعاة الدقة، وترتيب المعلومات.
+
+المبادئ:
+1) الصياغة: رسمية، موجزة، خالية من الآراء والانحياز، وواضحة للفِرَق القانونية والقيادة.
+2) التحقق: اطلب التوضيح عند نقص البيانات، ولا تفترض حقائق غير مذكورة.
+3) البنية: عند توفر بيانات كافية، قدّم تقريراً منسقاً بالعناوين التالية (مع الترتيب):
+   - البيانات العامة (رقم المحضر/القضية، الجهة المُحرِّرة، اسم ورتبة مُحرر المحضر، التاريخ والوقت، مكان الواقعة/القسم/المحافظة)
+   - الأطراف (المُبلغ، المجني عليه/الجهة المتضررة، المتهم/المشتبه به، بيانات تعريفية مختصرة)
+   - وقائع الحادث (وصف زمني موجز للواقعة مع تحديد الأدوات/الوسائل)
+   - الشهود (الأسماء ووسائل التواصل والملخصات)
+   - الأدلة والمضبوطات (الوصف، طريقة الضبط، أرقام المحاضر/الأحراز إن وجدت)
+   - الإجراءات المتخذة (المعاينة، الاستدعاء، التحفظ، الإخطار، الإجراءات الفنية)
+   - التكييف القانوني (المواد القانونية المُحتملة من قانون العقوبات/الإجراءات أو القوانين الخاصة)
+   - الطلبات والتوصيات (الإجراءات المطلوبة من النيابة/الجهات المختصة)
+   - المرفقات (صور، تقارير فنية، إفادات، تسجيلات، إيصالات، إلخ)
+   - التوقيعات (محرر المحضر، الشهود إن لزم)
+4) السلامة: لا تُدرج معلومات حساسة إلا إذا قدمها المستخدم صراحة.
+5) في حال غياب معلومة: استخدم "غير متوفر" بدل الافتراض.
+`,
+      intake: `مرحباً، سأساعدك في إعداد تقرير قانوني/محضر رسمي. من فضلك زوِّدني بالمعلومات التالية (يمكنك الرد بنقاط متتابعة؛ اكتب "غير متوفر" عند غياب أي بند):
+
+1) البيانات العامة:
+   - رقم المحضر/القضية (إن وجد)
+   - الجهة المُحرِّرة/اسم القسم
+   - اسم ورتبة مُحرر المحضر
+   - التاريخ والوقت
+   - مكان الواقعة (العنوان/القسم/المحافظة)
+
+2) الأطراف:
+   - بيانات المُبلغ
+   - بيانات المجني عليه/الجهة المتضررة
+   - بيانات المتهم/المُشتبه به (إن وجد)
+
+3) وصف موجز للواقعة زمنيّاً (كيف بدأت، ماذا حدث، بمشاركة من، أدوات/وسائل مستخدمة)
+
+4) الشهود (الأسماء ووسائل التواصل والملخص)
+
+5) الأدلة والمضبوطات (الوصف، طريقة الضبط، رقم الحرز إن وجد)
+
+6) الإجراءات المتخذة (معاينة، استدعاء، تحفظ، إخطار، إجراءات فنية)
+
+7) التكييف القانوني المتوقع (إن توفر)
+
+8) الطلبات/التوصيات المرجو اتخاذها
+
+9) المرفقات (صور، تقارير فنية، إفادات، تسجيلات، إيصالات)
+
+بعد تزويدي بالمعلومات، سأقوم بصياغة تقرير منسّق وجاهز.\n`,
+    },
+    fake_news: {
+      label: 'مُحلل الأخبار المُضلِّلة',
+      system: `
+أنت مساعد متخصص في تحليل الأخبار والمحتوى لكشف التضليل. هدفك تقييم المصداقية، تحديد المغالطات، والتحقق من الأدلة والمصادر بلغة عربية فصحى واضحة ومحايدة.
+
+التعليمات:
+1) اطلب من المستخدم: نص الادّعاء/الخبر، الروابط/المصادر، سياق النشر (تاريخ/منصة)، وأي قرائن داعمة.
+2) التحليل المنهجي:
+   - تفكيك الادّعاءات إلى نقاط قابلة للتحقق
+   - البحث في المصادر الموثوقة (موسوعية/مؤسسات صحفية معروفة/تقارير رسمية) إن كانت متاحة للمستخدم
+   - رصد المغالطات والأساليب البلاغية التضليلية
+   - تقييم مصداقية المصادر والسجل التاريخي للناشر
+3) قدّم نتيجة مختصرة: موثوق/مضلل/غير مؤكد، مع مستوى ثقة، وأذكر مواطن عدم اليقين.
+4) لا تخترع مصادر. إن غابت الروابط قل "غير متوفر" واطلبها.
+5) تنسيق الخلاصة:
+   - خلاصة الحكم
+   - الأدلة الداعمة/الناقضة
+   - الثغرات وما يلزم لاستكمال التحقق
+   - توصية المتابعة
+`,
+      intake: `مرحباً، سأساعدك في تحليل خبر/ادّعاء لكشف مدى مصداقيته. تكرماً زوِّدني بما يلي:
+
+1) نص الادّعاء/الخبر كاملاً
+2) الروابط/المصادر الأصلية (إن توفرت)
+3) سياق النشر (التاريخ/المنصة/الناشر)
+4) أي قرائن/لقطات شاشة/توثيقات إضافية
+
+سأعيد لك تحليلاً مُنظماً بالحكم والخلاصة والأدلة والفجوات.\n`,
+    },
+    general: {
+      label: 'مساعد عام',
+      system: `أنت مساعد عربي مهذب ودقيق. أجب بإيجاز ووضوح وبلا معلومات مختلَقة.`,
+      intake: 'مرحباً! كيف يمكنني مساعدتك اليوم؟\n',
+    },
+  };
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showSpeechToText, setShowSpeechToText] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [liveDraft, setLiveDraft] = useState('');
+  const [autoDraft, setAutoDraft] = useState(true);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [reportStatus, setReportStatus] = useState<'idle'|'draft'|'final'>('idle');
+  const [draftCollapsed, setDraftCollapsed] = useState(true);
   const flatListRef = useRef<FlatList<Message>>(null);
+
+  // Subscribe to conversations list
+  useEffect(() => {
+    const q = query(collection(db, 'conversations'), orderBy('updatedAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const items: Conversation[] = snap.docs.map((d) => ({ id: d.id, title: 'محادثة جديدة', persona: 'general', ...d.data() } as Conversation));
+      setConversations(items);
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to messages for selected conversation
+  useEffect(() => {
+    if (!selectedConversation) { setMessages([]); return; }
+    const q = query(collection(db, 'conversations', selectedConversation.id, 'messages'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const msgs: Message[] = snap.docs.map((d) => {
+        const data = d.data() as any;
+        const created = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date();
+        const msg: Message = {
+          id: d.id,
+          content: data.content || '',
+          type: data.type,
+          timestamp: created,
+        };
+        if (data.attachment) msg.attachment = data.attachment;
+        return msg;
+      });
+      setMessages(msgs);
+    });
+    return () => unsub();
+  }, [selectedConversation?.id]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -43,31 +207,404 @@ export function ChatPage() {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  // Auto-generate live draft when messages change
+  useEffect(() => {
+    const shouldDraft = !!selectedConversation && autoDraft && messages.length > 0;
+    if (!shouldDraft) return;
+    const t = setTimeout(() => {
+      generateLiveDraft().catch(() => {});
+    }, 400); // small debounce
+    return () => clearTimeout(t);
+  }, [messages, autoDraft, selectedConversation?.id]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputText.trim(),
-      type: 'user',
-      timestamp: new Date(),
+  const buildDraftSystemPrompt = (personaId: PersonaId) => {
+    if (personaId === 'legal') {
+      return `
+أنت منشئ تقارير قانونية بصياغة عربية احترافية. ابنِ تقريراً موجزاً من المحادثة الحالية بصيغة Markdown، مع هذه العناوين: 
+- البيانات العامة
+- الأطراف
+- وقائع الحادث
+- الشهود
+- الأدلة والمضبوطات
+- الإجراءات المتخذة
+- التكييف القانوني
+- الطلبات والتوصيات
+- المرفقات
+
+إن وُجدت معلومات ناقصة أو غير مؤكدة، أضف قسماً في الأسفل بعنوان "المعلومات الناقصة" بنقاط قصيرة. استخدم "غير متوفر" عند الحاجة. تجنب الحشو وركّز على الوضوح.`;
+    }
+    // fake_news and general -> analytical report style
+    return `
+أنت منشئ تقارير تحليلية لكشف التضليل. لخص الحوار الحالي في تقرير عربي واضح بصيغة Markdown يتضمن:
+- الملخص التنفيذي
+- الادعاءات المفككة
+- الأدلة الداعمة والناقضة (مع الإشارة إلى الروابط إن ذُكرت)
+- تقييم المصداقية ومستوى الثقة
+- الفجوات اللازمة لاستكمال التحقق
+- التوصيات
+إن كانت هناك معلومات ناقصة، أضف قسماً بعنوان "المعلومات الناقصة".`;
+  };
+
+  const generateLiveDraft = async () => {
+    if (!selectedConversation) return;
+    const personaId = (selectedConversation.persona || 'general') as PersonaId;
+    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+    if (!apiKey) return;
+
+    const system = buildDraftSystemPrompt(personaId);
+    const apiMessages = [
+      { role: 'system', content: system },
+      ...messages.map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content || (m.attachment ? `مرفق: ${m.attachment.name}` : '') })),
+      { role: 'user', content: 'أنشئ مسودة تقرير محدثة بناءً على المحادثة أعلاه.' },
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: apiMessages, temperature: 0.2 }),
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    if (content) setLiveDraft(content);
+  };
+
+  const extractTitleFromMarkdown = (md: string) => {
+    const m = md.match(/^#\s+(.+)/m);
+    if (m) return m[1].trim();
+    return `تقرير ${new Date().toLocaleString('ar-SA')}`;
+  };
+
+  const saveReport = async (status: 'draft'|'final') => {
+    if (!selectedConversation || !liveDraft.trim()) return;
+    setSavingDraft(true);
+    try {
+      const reportId = selectedConversation.id; // 1:1 with conversation
+      const refDoc = doc(db, 'reports', reportId);
+      const snap = await getDoc(refDoc);
+      const structured = buildStructuredReport(liveDraft, (selectedConversation.persona || 'general') as PersonaId);
+      const payload: any = {
+        conversationId: selectedConversation.id,
+        persona: selectedConversation.persona,
+        title: extractTitleFromMarkdown(liveDraft),
+        content: liveDraft,
+        structured,
+        stats: {
+          missingCount: structured?.missingFields?.length || 0,
+          wordCount: liveDraft.split(/\s+/).filter(Boolean).length,
+        },
+        status,
+        updatedAt: serverTimestamp(),
+      };
+      if (!snap.exists()) payload.createdAt = serverTimestamp();
+      await setDoc(refDoc, payload, { merge: true });
+      setReportStatus(status);
+      // Also mirror minimal info on conversation for quick linking
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+        reportId,
+        updatedAt: serverTimestamp(),
+      });
+      // Feedback as assistant message
+      setMessages(prev => [...prev, { id: Date.now().toString(), content: status==='final'? 'تم حفظ التقرير النهائي في قسم التقارير.' : 'تم حفظ المسودة. يمكنك المتابعة لاحقاً من نفس المحادثة.', type: 'assistant', timestamp: new Date() }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { id: (Date.now()+1).toString(), content: 'تعذر حفظ التقرير. تحقق من الصلاحيات ثم أعد المحاولة.', type: 'assistant', timestamp: new Date() }]);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  // Minimal parser to structure the report sections for storage
+  const buildStructuredReport = (md: string, personaId: PersonaId) => {
+    const between = (needle: RegExp, source: string) => {
+      const m = source.match(needle);
+      if (!m) return '';
+      const idx = m.index ?? 0;
+      const after = source.slice(idx + m[0].length);
+      const next = after.search(/^#{1,6}\s+/m);
+      return next === -1 ? after.trim() : after.slice(0, next).trim();
     };
+    const bullets = (block: string) => block.split(/\n/).filter(l => /^-\s+/.test(l)).map(l => l.replace(/^-\s+/, '').trim());
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
+    if (personaId === 'legal') {
+      const general = between(/^#{1,6}\s*البيانات العامة:?/mi, md);
+      const parties = between(/^#{1,6}\s*الأطراف:?/mi, md);
+      const incident = between(/^#{1,6}\s*وقائع الحادث:?/mi, md);
+      const witnesses = between(/^#{1,6}\s*الشهود:?/mi, md);
+      const evidence = between(/^#{1,6}\s*الأدلة والمضبوطات:?/mi, md);
+      const actions = between(/^#{1,6}\s*الإجراءات المتخذة:?/mi, md);
+      const legalQ = between(/^#{1,6}\s*التكييف القانوني:?/mi, md);
+      const recs = between(/^#{1,6}\s*الطلبات والتوصيات:?/mi, md);
+      const attach = between(/^#{1,6}\s*المرفقات:?/mi, md);
+      const missingBlock = between(/^#{1,6}\s*المعلومات الناقصة:?/mi, md);
+      const missing = bullets(missingBlock);
+      return {
+        type: 'legal',
+        general, parties, incident, witnesses, evidence, actions, legalQualification: legalQ, recommendations: recs, attachments: attach,
+        missingFields: missing,
+      };
+    }
+    // default analytical structure
+    const exec = between(/^#{1,6}\s*الملخص التنفيذي:?/mi, md);
+    const claims = between(/^#{1,6}\s*الادعاءات المفككة:?/mi, md);
+    const proofs = between(/^#{1,6}\s*الأدلة الداعمة والناقضة:?/mi, md);
+    const credibility = between(/^#{1,6}\s*تقييم المصداقية:?/mi, md);
+    const gaps = between(/^#{1,6}\s*الفجوات:?/mi, md);
+    const recs = between(/^#{1,6}\s*التوصيات:?/mi, md);
+    const missingBlock = between(/^#{1,6}\s*المعلومات الناقصة:?/mi, md);
+    const missing = bullets(missingBlock);
+    return { type: 'analysis', executive: exec, claims, proofs, credibility, gaps, recommendations: recs, missingFields: missing };
+  };
+
+  // No modal anymore; we keep inline start panel when no conversation selected
+
+  const uploadFileToStorage = async (uri: string, contentType: string, fileName: string): Promise<{ url: string; name: string; contentType: string; size?: number; }> => {
+    if (!selectedConversation) throw new Error('لا توجد محادثة مختارة');
+    const safeName = fileName.replace(/[^\w\-\.]+/g, '_');
+    const path = `conversations/${selectedConversation.id}/attachments/${Date.now()}_${safeName}`;
+    const storageRef = ref(storage, path);
+
+    // Web: fetch blob and uploadBytes; Native: read base64 and uploadString
+    if (Platform.OS === 'web') {
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      await uploadBytes(storageRef, blob, { contentType });
+    } else {
+      const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      await uploadString(storageRef, b64, 'base64', { contentType });
+    }
+    const url = await getDownloadURL(storageRef);
+
+    let size: number | undefined = undefined;
+    try {
+      const info = await FileSystem.getInfoAsync(uri);
+      if (info.exists && info.size) size = info.size as number;
+    } catch {}
+
+    return { url, name: fileName, contentType, size };
+  };
+
+  const handleAttachImage = async () => {
+    if (!selectedConversation) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== 'granted') return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    if (res.canceled || !res.assets?.length) return;
+    const asset = res.assets[0];
+    const uri = asset.uri;
+    const name = (asset as any).fileName || `image_${Date.now()}.jpg`;
+    const contentType = (asset as any).mimeType || 'image/jpeg';
+
     setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const attachment = await uploadFileToStorage(uri, contentType, name);
+      const msgRef = await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
+        content: '',
+        type: 'user',
+        createdAt: serverTimestamp(),
+        attachment,
+      });
+      setMessages(prev => [...prev, { id: msgRef.id, content: '', type: 'user', timestamp: new Date(), attachment }]);
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+        lastMessage: attachment.name,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `شكراً لك على رسالتك: "${userMessage.content}". هذا رد تجريبي من المساعد الذكي. في التطبيق الحقيقي، سيتم تحليل رسالتك وتقديم إجابة مفيدة ودقيقة.`,
+        id: (Date.now() + 4).toString(),
+        content: `تعذر رفع الملف: ${e instanceof Error ? e.message : ''}`,
         type: 'assistant',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
+  };
+
+  const handleAttachDocument = async () => {
+    if (!selectedConversation) return;
+    const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
+    if (res.canceled || !res.assets?.length) return;
+    const asset = res.assets[0];
+    const uri = asset.uri;
+    const name = asset.name || `document_${Date.now()}.pdf`;
+    const contentType = asset.mimeType || 'application/pdf';
+
+    setIsTyping(true);
+    try {
+      const attachment = await uploadFileToStorage(uri, contentType, name);
+      const msgRef = await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
+        content: '',
+        type: 'user',
+        createdAt: serverTimestamp(),
+        attachment,
+      });
+      setMessages(prev => [...prev, { id: msgRef.id, content: '', type: 'user', timestamp: new Date(), attachment }]);
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+        lastMessage: attachment.name,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      const assistantMessage: Message = {
+        id: (Date.now() + 5).toString(),
+        content: `تعذر رفع الملف: ${e instanceof Error ? e.message : ''}`,
+        type: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!text || !selectedConversation) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: text,
+      type: 'user',
+      timestamp: new Date(),
+    };
+
+    // Optimistic UI
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setIsTyping(true);
+
+    try {
+      // Persist user message
+      await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
+        content: text,
+        type: 'user',
+        createdAt: serverTimestamp(),
+      });
+
+      // Lock persona after first user message and update title/lastMessage
+      if (!selectedConversation.locked) {
+        const newTitle = selectedConversation.title && selectedConversation.title !== 'محادثة جديدة'
+          ? selectedConversation.title
+          : text.slice(0, 40);
+        await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+          locked: true,
+          title: newTitle || 'محادثة',
+          lastMessage: text.slice(0, 120),
+          updatedAt: serverTimestamp(),
+        });
+        setSelectedConversation({ ...selectedConversation, locked: true, title: newTitle || 'محادثة' });
+      } else {
+        await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+          lastMessage: text.slice(0, 120),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+      if (!apiKey) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: 'لم يتم ضبط مفتاح واجهة OpenAI. رجاءً أضف المتغير EXPO_PUBLIC_OPENAI_API_KEY إلى ملف .env ثم أعد التشغيل.',
+          type: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        return;
+      }
+
+      // Build chat history for the API
+      const personaId = (selectedConversation.persona || 'general') as PersonaId;
+      const systemPrompt = personaPrompts[personaId]?.system || personaPrompts.general.system;
+      const apiMessages = [
+        { role: 'system', content: systemPrompt },
+        ...messages.map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content })),
+        { role: 'user', content: text },
+      ];
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: apiMessages,
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content?.trim();
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        content: content || 'تعذر توليد رد من النموذج.',
+        type: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Persist assistant message
+      await addDoc(collection(db, 'conversations', selectedConversation.id, 'messages'), {
+        content: assistantMessage.content,
+        type: 'assistant',
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+        lastMessage: assistantMessage.content.slice(0, 120),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e: any) {
+      const assistantMessage: Message = {
+        id: (Date.now() + 3).toString(),
+        content: `حدث خطأ أثناء الاتصال بـ OpenAI: ${e?.message || e}`,
+        type: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const createConversation = async (p: PersonaId) => {
+    // Create conversation doc
+    const docRef = await addDoc(collection(db, 'conversations'), {
+      title: 'محادثة جديدة',
+      persona: p,
+      locked: false,
+      lastMessage: personaPrompts[p].intake.slice(0, 120),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    // Add intake as first assistant message
+    await addDoc(collection(db, 'conversations', docRef.id, 'messages'), {
+      content: personaPrompts[p].intake,
+      type: 'assistant',
+      createdAt: serverTimestamp(),
+    });
+    const conv: Conversation = { id: docRef.id, title: 'محادثة جديدة', persona: p, locked: false };
+    setSelectedConversation(conv);
+  };
+
+  const startNewChatFlow = () => {
+    // Show inline start panel by clearing selection
+    setSelectedConversation(null);
+  };
+
+  const pickPersonaAndCreate = async (p: PersonaId) => {
+    setErrorText(null);
+    try {
+      await createConversation(p);
+    } catch (e: any) {
+      setErrorText('تعذر بدء المحادثة: صلاحيات غير كافية في Firestore/Storage. حدّث قواعد الأمان ثم أعد المحاولة.');
+    }
   };
 
   const handleTranscriptionComplete = (transcribedText: string) => {
@@ -95,12 +632,30 @@ export function ChatPage() {
         styles.messageBubble,
         item.type === 'user' ? styles.userMessage : styles.assistantMessage
       ]}>
-        <Text style={[
-          styles.messageText,
-          item.type === 'user' ? styles.userMessageText : styles.assistantMessageText
-        ]}>
-          {item.content}
-        </Text>
+        {item.attachment ? (
+          <View>
+            {item.attachment.contentType.startsWith('image/') ? (
+              <Image source={{ uri: item.attachment.url }} style={styles.imagePreview} />
+            ) : (
+              <TouchableOpacity style={styles.fileAttachment} onPress={() => WebBrowser.openBrowserAsync(item.attachment!.url)}>
+                <Paperclip size={16} color={Colors.text.primary} />
+                <Text style={styles.fileName} numberOfLines={1}>{item.attachment.name}</Text>
+                <Text style={styles.fileOpen}>فتح</Text>
+              </TouchableOpacity>
+            )}
+            {!!item.content?.trim() && (
+              <View style={{ marginTop: Spacing[2] }}>
+                <Markdown style={item.type === 'user' ? chatMarkdownUserStyles : chatMarkdownAssistantStyles}>
+                  {item.content}
+                </Markdown>
+              </View>
+            )}
+          </View>
+        ) : (
+          <Markdown style={item.type === 'user' ? chatMarkdownUserStyles : chatMarkdownAssistantStyles}>
+            {item.content}
+          </Markdown>
+        )}
         <Text style={styles.messageTime}>
           {item.timestamp.toLocaleTimeString('ar-SA', { 
             hour: '2-digit', 
@@ -117,87 +672,257 @@ export function ChatPage() {
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Chat Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.newChatButton}>
-            <Plus size={20} color="#10B981" />
-            <Text style={styles.newChatText}>محادثة جديدة</Text>
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>المساعد الذكي</Text>
-            <Text style={styles.headerSubtitle}>مدعوم بالذكاء الاصطناعي المتقدم</Text>
+        <View style={styles.layoutRow}>
+          {/* Left: Conversations Panel */}
+          <View style={styles.conversationsPanel}>
+            <View style={styles.convHeader}>
+              <Text style={styles.convTitle}>المحادثات</Text>
+              <TouchableOpacity style={styles.newChatButton} onPress={startNewChatFlow}>
+                <Plus size={18} color="#10B981" />
+                <Text style={styles.newChatText}>محادثة جديدة</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={conversations}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.convItem, selectedConversation?.id === item.id && styles.convItemActive]}
+                  onPress={() => setSelectedConversation(item)}
+                >
+                  <View style={styles.convItemRow}>
+                    <View style={styles.convIconBadge}>
+                      {item.persona === 'legal' ? (
+                        <FileText size={14} color={Colors.primary[600]} />
+                      ) : item.persona === 'fake_news' ? (
+                        <SearchIcon size={14} color={Colors.primary[600]} />
+                      ) : (
+                        <Bot size={14} color={Colors.primary[600]} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
+                      <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
           </View>
-        </View>
 
-        {/* Messages List */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={item => item.id}
-          renderItem={renderMessage}
-          style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        />
-
-        {/* Typing Indicator */}
-        {isTyping && (
-          <View style={styles.typingContainer}>
-            <View style={styles.typingBubble}>
-              <View style={styles.typingDots}>
-                <View style={[styles.typingDot, styles.typingDot1]} />
-                <View style={[styles.typingDot, styles.typingDot2]} />
-                <View style={[styles.typingDot, styles.typingDot3]} />
+          {/* Right: Chat Area */}
+          <View style={styles.chatArea}>
+            {/* Chat Header */}
+            <View style={styles.header}>
+              <View style={styles.headerRightCluster}>
+                <View style={styles.headerContent}>
+                  <Text style={styles.headerTitle}>{selectedConversation?.title || 'المساعد الذكي'}</Text>
+                  {selectedConversation ? (
+                    <View style={styles.personaBadge}>
+                      {selectedConversation.persona === 'legal' ? (
+                        <FileText size={14} color={Colors.primary[600]} />
+                      ) : selectedConversation.persona === 'fake_news' ? (
+                        <SearchIcon size={14} color={Colors.primary[600]} />
+                      ) : (
+                        <Bot size={14} color={Colors.primary[600]} />
+                      )}
+                      <Text style={styles.personaBadgeText}>{personaPrompts[selectedConversation.persona]?.label}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.headerSubtitle}>اختر نوع المساعدة ثم ابدأ المحادثة</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={toggle}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: palette.border.default,
+                    backgroundColor: palette.background.secondary,
+                    marginLeft: 8,
+                  }}
+                >
+                  {mode === 'dark' ? (
+                    <Sun size={18} color={palette.text.secondary} />
+                  ) : (
+                    <Moon size={18} color={palette.text.secondary} />
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
-        )}
 
-        {/* Speech to Text Modal */}
-        {showSpeechToText && (
-          <View style={styles.speechToTextOverlay}>
-            <View style={styles.speechToTextContainer}>
-              <SpeechToText
-                onTranscriptionComplete={handleTranscriptionComplete}
-                onClose={() => setShowSpeechToText(false)}
+            {/* Messages List or Empty State */}
+            {selectedConversation ? (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={(item) => item.id}
+                renderItem={renderMessage}
+                style={styles.messagesList}
+                contentContainerStyle={styles.messagesContent}
+                showsVerticalScrollIndicator={false}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>ابدأ محادثة جديدة</Text>
+                {errorText ? <Text style={styles.emptyError}>{errorText}</Text> : (
+                  <Text style={styles.emptySubtitle}>اختر أحد الأدوار التالية لبدء المحادثة</Text>
+                )}
+                <View style={styles.inlinePersonaRow}>
+                  <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('legal')}>
+                    <View style={styles.inlinePersonaIcon}><FileText size={20} color={Colors.primary[600]} /></View>
+                    <Text style={styles.inlinePersonaTitle}>كاتب التقارير القانونية</Text>
+                    <Text style={styles.inlinePersonaDesc}>صياغة محاضر وتقارير رسمية</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('fake_news')}>
+                    <View style={styles.inlinePersonaIcon}><SearchIcon size={20} color={Colors.primary[600]} /></View>
+                    <Text style={styles.inlinePersonaTitle}>محلل الأخبار المُضلِّلة</Text>
+                    <Text style={styles.inlinePersonaDesc}>تحقق مهني من المصداقية</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.inlinePersonaCard} onPress={() => pickPersonaAndCreate('general')}>
+                    <View style={styles.inlinePersonaIcon}><Bot size={20} color={Colors.primary[600]} /></View>
+                    <Text style={styles.inlinePersonaTitle}>مساعد عام</Text>
+                    <Text style={styles.inlinePersonaDesc}>مساعدة عامة وواضحة</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <View style={styles.typingContainer}>
+                <View style={styles.typingBubble}>
+                  <View style={styles.typingDots}>
+                    <View style={[styles.typingDot, styles.typingDot1]} />
+                    <View style={[styles.typingDot, styles.typingDot2]} />
+                    <View style={[styles.typingDot, styles.typingDot3]} />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Live Draft Panel */}
+            {selectedConversation && (
+              <View style={styles.draftPanel}>
+                <View style={styles.draftHeaderRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TouchableOpacity onPress={() => setDraftCollapsed(v => !v)}>
+                      {draftCollapsed ? <ChevronDown size={16} color={Colors.text.primary} /> : <ChevronUp size={16} color={Colors.text.primary} />}
+                    </TouchableOpacity>
+                    <FileText size={16} color={Colors.primary[600]} />
+                    <Text style={styles.draftTitle}>مسودة التقرير</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.pillBtn, styles.pillOn]}>
+                      <Text style={[styles.pillText, styles.pillTextOn]}>تلقائي</Text>
+                    </View>
+                    <TouchableOpacity style={[styles.secondaryBtn, (!liveDraft.trim() || savingDraft) && styles.secondaryBtnDisabled]} disabled={!liveDraft.trim() || savingDraft} onPress={() => saveReport('draft')}>
+                      <Text style={[styles.secondaryBtnText, (!liveDraft.trim() || savingDraft) && styles.secondaryBtnTextDisabled]}>{savingDraft ? 'جارٍ الحفظ...' : 'حفظ مسودة'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.primaryBtn, (!liveDraft.trim() || savingDraft) && styles.primaryBtnDisabled]} disabled={!liveDraft.trim() || savingDraft} onPress={() => saveReport('final')}>
+                      <Text style={[styles.primaryBtnText, (!liveDraft.trim() || savingDraft) && styles.primaryBtnTextDisabled]}>إنهاء</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {!draftCollapsed && (
+                  <>
+                    <View style={styles.draftBody}>
+                      {liveDraft ? (
+                        <ScrollView style={styles.draftScroll} contentContainerStyle={{ paddingBottom: 8 }}>
+                          <Markdown style={markdownStyles}>{liveDraft}</Markdown>
+                        </ScrollView>
+                      ) : (
+                        <Text style={styles.draftEmpty}>ابدأ بالمراسلة، وسيتم توليد مسودة تقرير تلقائياً.</Text>
+                      )}
+                    </View>
+                    {liveDraft && (() => {
+                      const m = liveDraft.match(/^[#]*\s*المعلومات الناقصة[\s\S]*?\n((?:- .+\n)+)/m);
+                      if (!m) return null;
+                      const bullets = (m[1].match(/^- /gm) || []).length;
+                      return (
+                        <View style={styles.missingRow}>
+                          <Text style={styles.missingText}>معلومات ناقصة: {bullets}</Text>
+                        </View>
+                      );
+                    })()}
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* Speech to Text Modal */}
+            {showSpeechToText && (
+              <View style={styles.speechToTextOverlay}>
+                <View style={styles.speechToTextContainer}>
+                  <SpeechToText
+                    onTranscriptionComplete={handleTranscriptionComplete}
+                    onClose={() => setShowSpeechToText(false)}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Input Area */}
+            <View style={styles.inputArea}>
+              <TouchableOpacity
+                style={[styles.sendButton, (!inputText.trim() || !selectedConversation) && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={!inputText.trim() || !selectedConversation}
+              >
+                <Send 
+                  size={20} 
+                  color={inputText.trim() && selectedConversation ? "#FFFFFF" : "#9CA3AF"} 
+                />
+              </TouchableOpacity>
+
+              <View style={styles.inputActionsGroup}>
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={handleAttachImage}
+                  disabled={!selectedConversation}
+                >
+                  <Paperclip size={18} color={Colors.text.tertiary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={handleAttachDocument}
+                  disabled={!selectedConversation}
+                >
+                  <Text style={styles.attachDocText}>PDF</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.speechButton}
+                  onPress={() => setShowSpeechToText(true)}
+                  disabled={!selectedConversation}
+                >
+                  <Mic size={20} color="#10B981" />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.textInput}
+                placeholder={selectedConversation ? "اكتب رسالتك هنا..." : "ابدأ محادثة جديدة واختر نوع المساعدة"}
+                placeholderTextColor="#9CA3AF"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={1000}
+                textAlign="right"
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+                editable={!!selectedConversation}
               />
             </View>
           </View>
-        )}
-
-        {/* Input Area */}
-        <View style={styles.inputArea}>
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleSend}
-            disabled={!inputText.trim()}
-          >
-            <Send 
-              size={20} 
-              color={inputText.trim() ? "#FFFFFF" : "#9CA3AF"} 
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.speechButton}
-            onPress={() => setShowSpeechToText(true)}
-          >
-            <Mic size={20} color="#10B981" />
-          </TouchableOpacity>
-
-          <TextInput
-            style={styles.textInput}
-            placeholder="اكتب رسالتك هنا أو استخدم التسجيل الصوتي..."
-            placeholderTextColor="#9CA3AF"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={1000}
-            textAlign="right"
-            onSubmitEditing={handleSend}
-            blurOnSubmit={false}
-          />
         </View>
+
+        {/* No modal; inline persona cards are rendered in empty state */}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -207,6 +932,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.secondary,
+    // Ensure RTL layout by default
+  //  direction: 'rtl' as const,
+   // writingDirection: 'rtl' as const,
   },
   keyboardContainer: {
     flex: 1,
@@ -234,6 +962,10 @@ const styles = StyleSheet.create({
     ...TextStyles.caption,
     textAlign: 'right',
   },
+  headerRightCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   newChatButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,6 +985,8 @@ const styles = StyleSheet.create({
   messagesContent: {
     padding: Spacing[5],
     paddingBottom: Spacing[8],
+    direction: 'rtl' as const,
+    writingDirection: 'rtl' as const,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -309,6 +1043,27 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     textAlign: 'right',
   },
+  imagePreview: {
+    width: 220,
+    height: 160,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing[2],
+  },
+  fileAttachment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  fileName: {
+    flex: 1,
+    fontSize: Typography.sizes.sm,
+    color: Colors.text.primary,
+  },
+  fileOpen: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.primary[600],
+    fontFamily: Typography.weights.semibold,
+  },
   messageTime: {
     fontSize: Typography.sizes.xs,
     fontFamily: Typography.weights.regular,
@@ -349,6 +1104,217 @@ const styles = StyleSheet.create({
   typingDot3: {
     // Animation would be added here in a real implementation
   },
+  draftPanel: {
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    marginHorizontal: Spacing[5],
+    marginBottom: Spacing[3],
+    overflow: 'hidden',
+  },
+  draftHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  draftTitle: {
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.weights.semibold,
+    color: Colors.text.primary,
+  },
+  draftBody: {
+    padding: Spacing[3],
+  },
+  draftScroll: {
+    maxHeight: 340,
+  },
+  draftEmpty: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+  },
+  missingRow: {
+    paddingHorizontal: Spacing[4],
+    paddingBottom: Spacing[3],
+  },
+  missingText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.danger[600],
+    fontFamily: Typography.weights.semibold,
+  },
+  pillBtn: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+  },
+  pillOn: { backgroundColor: Colors.success[50], borderColor: Colors.success[200] },
+  pillOff: { backgroundColor: Colors.background.secondary, borderColor: Colors.border.default },
+  pillText: { fontSize: Typography.sizes.sm },
+  pillTextOn: { color: Colors.success[700], fontFamily: Typography.weights.semibold },
+  pillTextOff: { color: Colors.text.secondary },
+  primaryBtn: {
+    backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+  },
+  primaryBtnDisabled: { backgroundColor: Colors.secondary[300] },
+  primaryBtnText: { color: Colors.text.inverse, fontFamily: Typography.weights.semibold },
+  primaryBtnTextDisabled: { color: Colors.text.inverse },
+  secondaryBtn: {
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+  },
+  secondaryBtnDisabled: { opacity: 0.6 },
+  secondaryBtnText: { color: Colors.text.primary, fontFamily: Typography.weights.semibold },
+  secondaryBtnTextDisabled: { color: Colors.text.tertiary },
+  layoutRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  conversationsPanel: {
+    width: 280,
+    borderRightWidth: 1,
+    borderRightColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
+  },
+  convHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.default,
+  },
+  convTitle: {
+    fontSize: Typography.sizes.lg,
+    fontFamily: Typography.weights.semibold,
+    color: Colors.text.primary,
+  },
+  convItem: {
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  convItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+  },
+  convIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
+  convItemActive: {
+    backgroundColor: Colors.primary[50],
+  },
+  convItemTitle: {
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.weights.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing[1],
+  },
+  convItemMeta: {
+    fontSize: Typography.sizes.sm,
+    fontFamily: Typography.weights.regular,
+    color: Colors.text.muted,
+  },
+  chatArea: {
+    flex: 1,
+    backgroundColor: Colors.background.secondary,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    ...TextStyles.heading3,
+    textAlign: 'center',
+    marginBottom: Spacing[2],
+  },
+  emptyError: {
+    ...TextStyles.caption,
+    color: Colors.danger[600],
+    textAlign: 'center',
+    marginBottom: Spacing[2],
+  },
+  emptySubtitle: {
+    ...TextStyles.caption,
+    textAlign: 'center',
+  },
+  inlinePersonaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[3],
+    marginTop: Spacing[4],
+    justifyContent: 'center',
+    paddingHorizontal: Spacing[4],
+  },
+  inlinePersonaCard: {
+    width: 220,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    alignItems: 'center',
+  },
+  inlinePersonaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing[2],
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  inlinePersonaTitle: {
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.weights.semibold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginTop: Spacing[1],
+  },
+  inlinePersonaDesc: {
+    fontSize: Typography.sizes.sm,
+    fontFamily: Typography.weights.regular,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: Spacing[1],
+  },
+  personaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+  },
+  personaBadgeText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.primary[600],
+    fontFamily: Typography.weights.semibold,
+  },
+  // modal styles removed (inline start panel is used)
   speechToTextOverlay: {
     position: 'absolute',
     top: 0,
@@ -379,11 +1345,17 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.default,
     gap: Spacing[3],
   },
+  inputActionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
   textInput: {
     flex: 1,
     ...InputStyles.large,
     maxHeight: 120,
     textAlignVertical: 'top',
+    writingDirection: 'rtl' as const,
   },
   speechButton: {
     width: 48,
@@ -395,6 +1367,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachDocText: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.text.tertiary,
+    fontFamily: Typography.weights.semibold,
+  },
   sendButton: {
     width: 48,
     height: 48,
@@ -403,4 +1390,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sendButtonDisabled: {
+    backgroundColor: Colors.secondary[300],
+  },
 });
+
+// Markdown styles for live draft rendering
+const markdownStyles = {
+  body: {
+    color: Colors.text.primary,
+    fontFamily: Typography.weights.regular,
+    fontSize: Typography.sizes.sm,
+    lineHeight: Typography.lineHeights.relaxed * Typography.sizes.sm,
+    textAlign: 'right' as const,
+    writingDirection: 'rtl' as const,
+  },
+  heading1: {
+    color: Colors.text.primary,
+    fontFamily: Typography.weights.semibold,
+    fontSize: Typography.sizes.xl,
+    marginBottom: Spacing[2],
+    textAlign: 'right' as const,
+  },
+  heading2: {
+    color: Colors.text.primary,
+    fontFamily: Typography.weights.semibold,
+    fontSize: Typography.sizes.lg,
+    marginTop: Spacing[2],
+    marginBottom: Spacing[1],
+    textAlign: 'right' as const,
+  },
+  paragraph: {
+    marginBottom: Spacing[2],
+  },
+  list_item: {
+    textAlign: 'right' as const,
+  },
+};
+
+// Markdown styles for chat bubbles
+const chatMarkdownAssistantStyles = {
+  body: {
+    color: Colors.text.primary,
+    fontFamily: Typography.weights.regular,
+    fontSize: Typography.sizes.base,
+    lineHeight: Typography.lineHeights.relaxed * Typography.sizes.base,
+    textAlign: 'right' as const,
+    writingDirection: 'rtl' as const,
+  },
+  heading1: { color: Colors.text.primary, fontFamily: Typography.weights.semibold, fontSize: Typography.sizes.lg, textAlign: 'right' as const },
+  heading2: { color: Colors.text.primary, fontFamily: Typography.weights.semibold, fontSize: Typography.sizes.base, textAlign: 'right' as const },
+  paragraph: { marginBottom: Spacing[1] },
+  bullet_list: { marginBottom: Spacing[1] },
+  ordered_list: { marginBottom: Spacing[1] },
+  list_item: { textAlign: 'right' as const },
+  link: { color: Colors.primary[600] },
+  code_inline: { backgroundColor: Colors.background.secondary, paddingHorizontal: 4, borderRadius: 4 },
+};
+
+const chatMarkdownUserStyles = {
+  body: {
+    color: Colors.text.inverse,
+    fontFamily: Typography.weights.regular,
+    fontSize: Typography.sizes.base,
+    lineHeight: Typography.lineHeights.relaxed * Typography.sizes.base,
+    textAlign: 'right' as const,
+    writingDirection: 'rtl' as const,
+  },
+  heading1: { color: Colors.text.inverse, fontFamily: Typography.weights.semibold, fontSize: Typography.sizes.lg, textAlign: 'right' as const },
+  heading2: { color: Colors.text.inverse, fontFamily: Typography.weights.semibold, fontSize: Typography.sizes.base, textAlign: 'right' as const },
+  paragraph: { marginBottom: Spacing[1] },
+  bullet_list: { marginBottom: Spacing[1] },
+  ordered_list: { marginBottom: Spacing[1] },
+  list_item: { textAlign: 'right' as const },
+  link: { color: Colors.background.primary },
+  code_inline: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 4, borderRadius: 4 },
+};

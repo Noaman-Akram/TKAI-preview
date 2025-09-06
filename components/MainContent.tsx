@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 import { OverviewPage } from '@/components/pages/OverviewPage';
 import { ScannerPage } from '@/components/pages/ScannerPage';
 import { ChatPage } from '@/components/pages/ChatPage';
@@ -15,6 +16,7 @@ import { AutomationPage } from '@/components/pages/AutomationPage';
 import { SecurityPage } from '@/components/pages/SecurityPage';
 import { IntegrationsPage } from '@/components/pages/IntegrationsPage';
 import { ReportWriterPage } from '@/components/pages/ReportWriterPage';
+import { MahaderPage } from '@/components/pages/MahaderPage';
 import { ContentGeneratorPage } from '@/components/pages/ContentGeneratorPage';
 import { TemplatesPage } from '@/components/pages/TemplatesPage';
 import { DraftsPage } from '@/components/pages/DraftsPage';
@@ -29,6 +31,7 @@ interface MainContentProps {
 }
 
 export function MainContent({ activeSection }: MainContentProps) {
+  const { palette } = useTheme();
   const renderPage = () => {
     switch (activeSection) {
       case 'chat':
@@ -45,6 +48,8 @@ export function MainContent({ activeSection }: MainContentProps) {
         return <SourcesPage />;
       case 'report-writer':
         return <ReportWriterPage />;
+      case 'mahader':
+        return <MahaderPage />;
       case 'content-generator':
         return <ContentGeneratorPage />;
       case 'templates':
@@ -83,7 +88,7 @@ export function MainContent({ activeSection }: MainContentProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: palette.background.secondary }]}>
       {renderPage()}
     </View>
   );

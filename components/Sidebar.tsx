@@ -29,6 +29,7 @@ import {
   Layers
 } from 'lucide-react-native';
 import { Image } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -68,6 +69,7 @@ const navigationItems = [
   
   // Report Writing & Content Creation
   { id: 'report-writer', label: 'كاتب التقارير', icon: PenTool, category: 'reports' },
+  { id: 'mahader', label: 'المحاضر', icon: FileText, category: 'reports' },
   { id: 'content-generator', label: 'منشئ المحتوى', icon: Sparkles, category: 'reports' },
   { id: 'templates', label: 'قوالب التقارير', icon: Layers, category: 'reports' },
   { id: 'drafts', label: 'المسودات', icon: FileText, category: 'reports' },
@@ -87,6 +89,7 @@ const navigationItems = [
 ];
 
 export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDesktop }: SidebarProps) {
+  const { palette } = useTheme();
   if (!isOpen) {
     return null;
   }
@@ -110,7 +113,8 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
       
       <View style={[
         styles.container,
-        isDesktop ? styles.containerDesktop : styles.containerMobile
+        isDesktop ? styles.containerDesktop : styles.containerMobile,
+        { backgroundColor: palette.background.primary, borderLeftColor: palette.border.default }
       ]}>
         <View style={styles.header}>
           {!isDesktop && (
@@ -123,20 +127,17 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
           )}
           <View style={styles.logoContainer}>
             <View style={styles.logoWrapper}>
-              <Image
-                source={require('../assets/images/Black.png')}
-                style={styles.logoImage}
-              />
+              <Text style={styles.logoText}>TK</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.appTitle}>
-          <Text style={styles.appTitleText}>منصة تكرونيكس للذكاء الاصطناعي</Text>
-          <Text style={styles.appSubtitle}>تحليلات وذكاء متقدم</Text>
+        <View style={[styles.appTitle, { backgroundColor: palette.background.secondary, borderBottomColor: palette.border.default }]}>
+              <Text style={[styles.appTitleText, { color: palette.text.primary }]}>منصة تكرونيكس للذكاء الاصطناعي</Text>
+              <Text style={[styles.appSubtitle, { color: palette.text.muted }]}>تحليلات وذكاء متقدم</Text>
         </View>
 
-        <ScrollView style={styles.navigation} showsVerticalScrollIndicator={false}>
+        <ScrollView style={[styles.navigation, { backgroundColor: palette.background.primary }]} showsVerticalScrollIndicator={false}>
           {categories.map((category) => (
             <View key={category.id} style={styles.categorySection}>
               <Text style={styles.categoryTitle}>{category.label}</Text>
@@ -158,22 +159,23 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
                       <View style={styles.navItemContent}>
                         <Text style={[
                           styles.navItemText,
+                          { color: isActive ? '#FFFFFF' : palette.text.secondary },
                           isActive && styles.navItemTextActive,
                         ]}>
                           {item.label}
                         </Text>
                         <View style={[
                           styles.iconContainer,
-                          isActive && styles.iconContainerActive
+                          { backgroundColor: isActive ? palette.primary[500] : palette.background.secondary, borderColor: isActive ? palette.primary[500] : palette.border.default }
                         ]}>
                           <IconComponent
                             size={16}
-                            color={isActive ? '#FFFFFF' : '#64748B'}
+                            color={isActive ? '#FFFFFF' : palette.text.secondary}
                             strokeWidth={2}
                           />
                         </View>
                       </View>
-                      {isActive && <View style={styles.activeIndicator} />}
+                      {isActive && <View style={[styles.activeIndicator, { backgroundColor: palette.primary[500] }]} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -184,7 +186,7 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
         <View style={styles.footer}>
           <View style={styles.statusIndicator}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>النظام متصل</Text>
+            <Text style={[styles.statusText, { color: palette.text.muted }]}>متصل الآن</Text>
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userDetails}>
@@ -275,6 +277,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     resizeMode: 'contain',
+  },
+  logoText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
+    letterSpacing: 1,
   },
   closeButton: {
     width: 36,

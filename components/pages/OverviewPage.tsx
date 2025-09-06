@@ -10,7 +10,7 @@ import {
 import { ScanLine, Upload, Link, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, CardStyles, ButtonStyles, LayoutStyles, TextStyles, InputStyles, ProgressStyles } from '@/constants/theme';
 
-export function ScannerPage() {
+export function OverviewPage() {
   const [inputText, setInputText] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
@@ -275,5 +275,5 @@ const styles = StyleSheet.create({
     color: Colors.danger[600],
     marginBottom: Spacing[1],
     textAlign: 'right',
-  },
+  }
 });

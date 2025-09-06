@@ -4,10 +4,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function LayoutInner() {
   useFrameworkReady();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -33,7 +34,15 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
     </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <LayoutInner />
+    </ThemeProvider>
   );
 }
