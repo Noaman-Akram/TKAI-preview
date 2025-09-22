@@ -94,9 +94,13 @@ const navigationItems = [
   { id: 'settings', label: 'الإعدادات', icon: Settings, category: 'system' },
 ];
 
+const LIGHT_LOGO = require('../assets/images/Black.png');
+const DARK_LOGO = require('../assets/images/Logo.jpeg');
+
 export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDesktop }: SidebarProps) {
   const { palette, mode, toggle } = useTheme();
   const isDark = mode === 'dark';
+  const logoSource = isDark ? DARK_LOGO : LIGHT_LOGO;
   if (!isOpen) {
     return null;
   }
@@ -123,7 +127,8 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
         isDesktop ? styles.containerDesktop : styles.containerMobile,
         { backgroundColor: palette.background.primary, borderLeftColor: palette.border.default }
       ]}>
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: palette.background.secondary, borderBottomColor: palette.border.default }]}
+        >
           {!isDesktop && (
             <TouchableOpacity
               style={styles.closeButton}
@@ -133,9 +138,9 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
             </TouchableOpacity>
           )}
                 
-          <View style={styles.logoContainer}>
+          <View style={[styles.logoContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}>
             <Image
-              source={require('../assets/images/Black.png')}
+              source={logoSource}
               style={[styles.logoImage, { width: 90, height: 90 }]}
             />
           </View>
@@ -285,32 +290,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-  },
-  logoWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
   },
   logoImage: {
-    width: 28,
-    height: 28,
     resizeMode: 'contain',
-  },
-  logoText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: '#0F172A',
-    letterSpacing: 1,
   },
   closeButton: {
     width: 36,

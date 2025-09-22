@@ -9,15 +9,13 @@ import {
   Image,
   Switch,
 } from 'react-native';
-import { Search, Menu, Plus, Bell, Command, Sun, Moon } from 'lucide-react-native';
+import { Search, Menu, Bell, Command, Sun, Moon } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 interface TopBarProps {
   activeSection: string;
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
-  onLogoPress?: () => void;
-  onGoToChat?: () => void;
 }
 
 const sectionTitles: Record<string, string> = {
@@ -48,12 +46,14 @@ const sectionTitles: Record<string, string> = {
 
 const { width } = Dimensions.get('window');
 
-export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress, onGoToChat }: TopBarProps) {
+const LIGHT_LOGO = require('../assets/images/Black.png');
+const DARK_LOGO = require('../assets/images/Logo.jpeg');
+
+export function TopBar({ activeSection, onToggleSidebar, sidebarOpen }: TopBarProps) {
   const { palette, mode, toggle } = useTheme();
-  const isTablet = width >= 768;
-  const isDesktop = width >= 1200;
   const isMobile = width < 768;
   const isDark = mode === 'dark';
+  const logoSource = isDark ? DARK_LOGO : LIGHT_LOGO;
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
@@ -68,16 +68,18 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
               placeholder="البحث في المنصة..."
               placeholderTextColor={palette.text.muted}
             />
-            <View style={styles.searchShortcut}>
+            <View
+              style={[styles.searchShortcut, { backgroundColor: palette.background.primary, borderColor: palette.border.default }]}
+            >
               <Command size={12} color={palette.text.muted} />
               <Text style={[styles.shortcutText, { color: palette.text.muted }]}>K</Text>
             </View>
           </View>
         )}
         {!sidebarOpen && (
-          <View style={styles.logoWrapper}>
+          <View style={[styles.logoWrapper, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}>
             <Image
-              source={require('../assets/images/Black.png')}
+              source={logoSource}
               style={styles.logoImage}
               resizeMode="contain"
             />
@@ -95,19 +97,12 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
       {/* Right Section - Actions & User */}
       <View style={[styles.rightSection, isMobile && styles.rightSectionMobile]}>
         {!isMobile && (
-          <>
-            <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}>
-              <Bell size={18} color={palette.text.secondary} strokeWidth={2} />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.actionButton, styles.primaryButton, { backgroundColor: palette.primary[500] }]} onPress={onGoToChat}>
-              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.primaryButtonText}>محادثة جديدة</Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity style={[styles.actionButton, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}>
+            <Bell size={18} color={palette.text.secondary} strokeWidth={2} />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.badgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
         )}
         
         <View style={styles.userSection}>
@@ -150,9 +145,6 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
             <View style={styles.mobileNotificationBadge}>
               <Text style={styles.mobileBadgeText}>3</Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.mobileActionButton, styles.mobilePrimaryButton]} onPress={onGoToChat}>
-            <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       )}
@@ -222,7 +214,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0F172A',
@@ -230,6 +221,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
   },
   logoImage: {
     width: 32,
@@ -325,26 +317,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  
-  primaryButton: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
-    paddingHorizontal: 16,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  
-  primaryButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginLeft: 6,
-    letterSpacing: 0.5,
-  },
-  
   notificationBadge: {
     position: 'absolute',
     top: -2,
@@ -465,11 +437,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
-  
-  mobilePrimaryButton: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
   },
   
   mobileNotificationBadge: {

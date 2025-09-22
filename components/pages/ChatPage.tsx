@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Pencil, X, Check } from 'lucide-react-native';
+import { Send, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Pencil, X, Check } from 'lucide-react-native';
 import { db } from '@/firebaseConfig';
 import {
   collection,
@@ -37,7 +37,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import * as FileSystem from 'expo-file-system';
 import { SpeechToText } from '@/components/SpeechToText';
-import { Colors, Typography, Spacing, BorderRadius, ButtonStyles, TextStyles, CardStyles, InputStyles } from '@/constants/theme';
+import { Colors, Typography, Spacing, BorderRadius, TextStyles, CardStyles, InputStyles } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 
 type PersonaId = 'legal' | 'fake_news' | 'general';
@@ -790,11 +790,6 @@ export function ChatPage() {
     setSelectedConversation(conv);
   };
 
-  const startNewChatFlow = () => {
-    // Show inline start panel by clearing selection
-    setSelectedConversation(null);
-  };
-
   const beginTitleEditing = () => {
     if (!selectedConversation || deletingConversationId === selectedConversation.id) return;
     const baseTitle = selectedConversation.customTitle
@@ -964,12 +959,6 @@ export function ChatPage() {
             <View style={styles.convHeader}>
               {!conversationsCollapsed && <Text style={styles.convTitle}>المحادثات</Text>}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2], marginLeft: 'auto' }}>
-                {!conversationsCollapsed && (
-                  <TouchableOpacity style={styles.newChatButton} onPress={startNewChatFlow}>
-                    <Plus size={18} color="#10B981" />
-                    <Text style={styles.newChatText}>محادثة جديدة</Text>
-                  </TouchableOpacity>
-                )}
                 <TouchableOpacity onPress={() => setConversationsCollapsed(v => !v)} style={styles.collapseBtn}>
                   {conversationsCollapsed ? (
                     <ChevronRight size={18} color={Colors.text.tertiary} />
@@ -1343,18 +1332,6 @@ const styles = StyleSheet.create({
   headerRightCluster: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  newChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...ButtonStyles.ghost,
-    borderColor: Colors.primary[200],
-    gap: Spacing[2],
-  },
-  newChatText: {
-    fontSize: Typography.sizes.sm,
-    fontFamily: Typography.weights.medium,
-    color: Colors.primary[600],
   },
   messagesList: {
     flex: 1,

@@ -46,7 +46,6 @@ export default function HomeScreen() {
               activeSection={activeSection}
               onToggleSidebar={toggleSidebar}
               sidebarOpen={sidebarOpen}
-              onGoToChat={() => setActiveSection('chat')}
             />
             <MainContent activeSection={activeSection} />
           </View>
