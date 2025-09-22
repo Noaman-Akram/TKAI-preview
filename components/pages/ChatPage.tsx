@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Pencil, X, Check } from 'lucide-react-native';
+import { Send, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Pencil, X, Check, Plus } from 'lucide-react-native';
 import { db } from '@/firebaseConfig';
 import {
   collection,
@@ -37,8 +37,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import * as FileSystem from 'expo-file-system';
 import { SpeechToText } from '@/components/SpeechToText';
-import { Colors, Typography, Spacing, BorderRadius, TextStyles, CardStyles, InputStyles } from '@/constants/theme';
-import { useTheme } from '@/context/ThemeContext';
+import { Colors, Typography, Spacing, BorderRadius, TextStyles, InputStyles, applyPaletteToColors } from '@/constants/theme';
+import { ThemeMode, useTheme } from '@/context/ThemeContext';
 
 type PersonaId = 'legal' | 'fake_news' | 'general';
 
@@ -130,7 +130,20 @@ const extractCaseNumberFromStructured = (structured: any, fallbackText?: string)
 };
 
 export function ChatPage() {
-  const { palette } = useTheme();
+  const { palette, mode } = useTheme();
+  const themedStyles = useMemo(() => {
+    applyPaletteToColors(palette);
+    return {
+      styles: createStyles(mode, palette),
+      liveDraftMarkdownStyles: createLiveDraftMarkdownStyles(),
+      chatMarkdownUserStyles: createChatMarkdownUserStyles(),
+      chatMarkdownAssistantStyles: createChatMarkdownAssistantStyles(),
+    };
+  }, [palette, mode]);
+  const styles = themedStyles.styles;
+  const liveDraftMarkdownStyles = themedStyles.liveDraftMarkdownStyles;
+  const chatMarkdownUserStyles = themedStyles.chatMarkdownUserStyles;
+  const chatMarkdownAssistantStyles = themedStyles.chatMarkdownAssistantStyles;
   // Persona prompts (Arabic)
   const personaPrompts: Record<PersonaId, { label: string; system: string; intake: string } > = {
     legal: {
@@ -888,6 +901,19 @@ export function ChatPage() {
     }
   };
 
+  const handleStartNewConversation = () => {
+    setSelectedConversation(null);
+    setMessages([]);
+    setInputText('');
+    setLiveDraft('');
+    setPendingAttachmentUri(null);
+    setUploading(false);
+    setReportStatus('idle');
+    setDraftCollapsed(true);
+    setErrorText(null);
+    setShowSpeechToText(false);
+  };
+
   const handleTranscriptionComplete = (transcribedText: string) => {
     setInputText(prev => prev + (prev ? ' ' : '') + transcribedText);
     setShowSpeechToText(false);
@@ -903,9 +929,9 @@ export function ChatPage() {
         item.type === 'user' ? styles.userAvatar : styles.assistantAvatar
       ]}>
         {item.type === 'user' ? (
-          <User size={16} color="#FFFFFF" />
+          <User size={16} color={Colors.text.inverse} />
         ) : (
-          <Bot size={16} color="#FFFFFF" />
+          <Bot size={16} color={Colors.text.inverse} />
         )}
       </View>
       
@@ -958,7 +984,17 @@ export function ChatPage() {
           <View style={[styles.conversationsPanel, conversationsCollapsed && styles.conversationsPanelCollapsed]}>
             <View style={styles.convHeader}>
               {!conversationsCollapsed && <Text style={styles.convTitle}>المحادثات</Text>}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2], marginLeft: 'auto' }}>
+              <View style={styles.convHeaderActions}>
+                {conversationsCollapsed ? (
+                  <TouchableOpacity style={styles.newConversationIconButton} onPress={handleStartNewConversation}>
+                    <Plus size={18} color={Colors.primary[600]} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.newConversationButton} onPress={handleStartNewConversation}>
+                    <Plus size={16} color={Colors.text.inverse} />
+                    <Text style={styles.newConversationButtonText}>محادثة جديدة</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setConversationsCollapsed(v => !v)} style={styles.collapseBtn}>
                   {conversationsCollapsed ? (
                     <ChevronRight size={18} color={Colors.text.tertiary} />
@@ -987,7 +1023,7 @@ export function ChatPage() {
                       )}
                     </View>
                     {!conversationsCollapsed && (
-                      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                      <View style={styles.convItemContent}>
                         <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
                         <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
                       </View>
@@ -1163,7 +1199,7 @@ export function ChatPage() {
                       {liveDraft ? (
                         <ScrollView style={styles.draftScroll} contentContainerStyle={{ paddingBottom: 8, alignItems: 'flex-end' }}>
                           <View style={styles.draftContentWrap}>
-                            <Markdown style={markdownStyles}>{liveDraft}</Markdown>
+                            <Markdown style={liveDraftMarkdownStyles}>{liveDraft}</Markdown>
                           </View>
                         </ScrollView>
                       ) : (
@@ -1206,7 +1242,7 @@ export function ChatPage() {
               >
                 <Send 
                   size={20} 
-                  color={inputText.trim() && selectedConversation && !uploading ? "#FFFFFF" : "#9CA3AF"} 
+                  color={inputText.trim() && selectedConversation && !uploading ? Colors.text.inverse : Colors.text.muted} 
                 />
               </TouchableOpacity>
 
@@ -1224,7 +1260,7 @@ export function ChatPage() {
                   onPress={() => setShowSpeechToText(true)}
                   disabled={!selectedConversation || uploading}
                 >
-                  <Mic size={20} color={selectedConversation && !uploading ? "#10B981" : Colors.text.muted} />
+                  <Mic size={20} color={selectedConversation && !uploading ? Colors.success[500] : Colors.text.muted} />
                 </TouchableOpacity>
               </View>
 
@@ -1240,7 +1276,7 @@ export function ChatPage() {
               <TextInput
                 style={[styles.textInput, (!selectedConversation || uploading) && styles.textInputDisabled]}
                 placeholder={selectedConversation ? "اكتب رسالتك هنا..." : "ابدأ محادثة جديدة واختر نوع المساعدة"}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={Colors.text.muted}
                 value={inputText}
                 onChangeText={setInputText}
                 multiline
@@ -1260,7 +1296,21 @@ export function ChatPage() {
   );
 }
 
-const styles = StyleSheet.create({
+type PaletteShape = ReturnType<typeof useTheme>['palette'];
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const sanitized = hex.replace('#', '');
+  const full = sanitized.length === 3
+    ? sanitized.split('').map((c) => c + c).join('')
+    : sanitized;
+  const intVal = parseInt(full, 16);
+  const r = (intVal >> 16) & 255;
+  const g = (intVal >> 8) & 255;
+  const b = intVal & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const createStyles = (mode: ThemeMode, palette: PaletteShape) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.secondary,
@@ -1291,6 +1341,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[1],
     textAlign: 'center',
     flexShrink: 1,
+    color: Colors.text.primary,
   },
   headerSubtitle: {
     ...TextStyles.caption,
@@ -1344,15 +1395,17 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl' as const,
   },
   messageContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     marginBottom: Spacing[4],
     alignItems: 'flex-end',
+    alignSelf: 'flex-end',
+    gap: Spacing[2],
   },
   userMessageContainer: {
-    justifyContent: 'flex-end',
+    alignSelf: 'flex-end',
   },
   assistantMessageContainer: {
-    justifyContent: 'flex-start',
+    alignSelf: 'flex-end',
   },
   messageAvatar: {
     width: 32,
@@ -1360,7 +1413,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: Spacing[2],
+    marginLeft: Spacing[2],
+    marginRight: 0,
   },
   userAvatar: {
     backgroundColor: Colors.primary[500],
@@ -1373,6 +1427,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
+    alignItems: 'flex-end',
   },
   userMessage: {
     backgroundColor: Colors.primary[500],
@@ -1574,6 +1629,36 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.default,
   },
+  convHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    marginLeft: 'auto',
+  },
+  newConversationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+    backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+  },
+  newConversationButtonText: {
+    fontSize: Typography.sizes.sm,
+    fontFamily: Typography.weights.semibold,
+    color: Colors.text.inverse,
+  },
+  newConversationIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
   convTitle: {
     fontSize: Typography.sizes.lg,
     fontFamily: Typography.weights.semibold,
@@ -1584,15 +1669,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[3],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
+    alignItems: 'flex-end',
   },
   convItemRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: Spacing[3],
   },
+  convItemContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: Spacing[1],
+  },
   trashBtn: {
     padding: Spacing[1],
-    marginLeft: 'auto',
+    marginRight: 'auto',
+    marginLeft: 0,
   },
   collapseBtn: {
     padding: Spacing[1],
@@ -1612,20 +1704,21 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.default,
   },
   convItemActive: {
-    backgroundColor: Colors.primary[50],
+    backgroundColor: hexToRgba(palette.primary[500], mode === 'dark' ? 0.2 : 0.08),
+    borderRightWidth: 2,
+    borderRightColor: palette.primary[500],
   },
   convItemTitle: {
     fontSize: Typography.sizes.base,
     fontFamily: Typography.weights.semibold,
     color: Colors.text.primary,
-    marginBottom: Spacing[1],
-    textAlign: 'center',
+    textAlign: 'right',
   },
   convItemMeta: {
     fontSize: Typography.sizes.sm,
     fontFamily: Typography.weights.regular,
-    color: Colors.text.muted,
-    textAlign: 'center',
+    color: Colors.text.tertiary,
+    textAlign: 'right',
   },
   chatArea: {
     flex: 1,
@@ -1823,7 +1916,7 @@ const styles = StyleSheet.create({
 });
 
 // Markdown styles for live draft rendering
-const markdownStyles = {
+const createLiveDraftMarkdownStyles = () => ({
   body: {
     color: Colors.text.primary,
     fontFamily: Typography.weights.regular,
@@ -1864,10 +1957,10 @@ const markdownStyles = {
   th: { textAlign: 'right' as const, fontFamily: Typography.weights.semibold, paddingVertical: 6 },
   tr: { borderBottomWidth: 1, borderBottomColor: Colors.border.light },
   td: { textAlign: 'right' as const, paddingVertical: 6 },
-};
+});
 
 // Markdown styles for chat bubbles
-const chatMarkdownAssistantStyles = {
+const createChatMarkdownAssistantStyles = () => ({
   body: {
     color: Colors.text.primary,
     fontFamily: Typography.weights.regular,
@@ -1884,9 +1977,9 @@ const chatMarkdownAssistantStyles = {
   list_item: { textAlign: 'right' as const },
   link: { color: Colors.primary[600] },
   code_inline: { backgroundColor: Colors.background.secondary, paddingHorizontal: 4, borderRadius: 4 },
-};
+});
 
-const chatMarkdownUserStyles = {
+const createChatMarkdownUserStyles = () => ({
   body: {
     color: Colors.text.inverse,
     fontFamily: Typography.weights.regular,
@@ -1903,4 +1996,4 @@ const chatMarkdownUserStyles = {
   list_item: { textAlign: 'right' as const },
   link: { color: Colors.background.primary },
   code_inline: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 4, borderRadius: 4 },
-};
+});
