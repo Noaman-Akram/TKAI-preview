@@ -47,7 +47,7 @@ const sectionTitles: Record<string, string> = {
 const { width } = Dimensions.get('window');
 
 const LIGHT_LOGO = require('../assets/images/Black.png');
-const DARK_LOGO = require('../assets/images/Logo.jpeg');
+const DARK_LOGO = require('../assets/images/White 2.png');
 
 export function TopBar({ activeSection, onToggleSidebar, sidebarOpen }: TopBarProps) {
   const { palette, mode, toggle } = useTheme();
