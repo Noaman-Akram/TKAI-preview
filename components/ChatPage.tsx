@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   conversationTitle: { fontWeight: 'bold', color: '#111827' },
   chatArea: { flex: 1, padding: 16, backgroundColor: '#fff' },
   header: { paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginBottom: 8 },
-  headerTitle: { fontWeight: 'bold', fontSize: 18, color: '#10B981' },
+  headerTitle: { fontWeight: 'bold', fontSize: 18, color: '#10B981' , textAlign: 'center'},
   message: { marginBottom: 10, padding: 10, borderRadius: 8, maxWidth: '80%', alignSelf: 'flex-end' },
   userMessage: { backgroundColor: '#10B981', alignSelf: 'flex-end' },
   assistantMessage: { backgroundColor: '#F3F4F6', alignSelf: 'flex-start' },

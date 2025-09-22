@@ -136,6 +136,38 @@ export const Colors = {
   },
 };
 
+type PaletteLike = {
+  background: { primary: string; secondary: string; tertiary: string };
+  text: { primary: string; secondary: string; inverse: string; muted: string };
+  border: { default: string; light: string };
+  primary: { 500: string; 600: string };
+  success: { 500: string };
+};
+
+export const applyPaletteToColors = (palette: PaletteLike) => {
+  Colors.background.primary = palette.background.primary;
+  Colors.background.secondary = palette.background.secondary;
+  Colors.background.tertiary = palette.background.tertiary;
+  Colors.background.muted = palette.border.light;
+
+  Colors.text.primary = palette.text.primary;
+  Colors.text.secondary = palette.text.secondary;
+  Colors.text.tertiary = palette.text.muted;
+  Colors.text.muted = palette.text.muted;
+  Colors.text.inverse = palette.text.inverse;
+  Colors.text.accent = palette.primary[500];
+
+  Colors.border.light = palette.border.light;
+  Colors.border.default = palette.border.default;
+  Colors.border.medium = palette.border.default;
+  Colors.border.dark = palette.text.muted;
+
+  Colors.brand.primary = palette.primary[500];
+  Colors.brand.secondary = palette.background.secondary;
+  Colors.brand.accent = palette.success[500];
+  Colors.brand.muted = palette.text.muted;
+};
+
 export const Typography = {
   // أحجام الخطوط
   sizes: {

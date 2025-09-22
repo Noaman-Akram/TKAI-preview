@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useState, ReactNode, useEffect } from 'react';
+import { applyPaletteToColors } from '@/constants/theme';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -40,6 +41,10 @@ const ThemeContext = createContext<ThemeContextValue>({ mode: 'light', palette: 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>('light');
   const palette = useMemo(() => (mode === 'dark' ? dark : light), [mode]);
+
+  useEffect(() => {
+    applyPaletteToColors(palette);
+  }, [palette]);
   const value = useMemo(() => ({ mode, palette, toggle: () => setMode(mode === 'dark' ? 'light' : 'dark'), setMode }), [mode, palette]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

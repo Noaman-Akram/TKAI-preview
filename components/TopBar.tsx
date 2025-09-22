@@ -6,8 +6,10 @@ import {
   StyleSheet,
   TextInput,
   Dimensions,
+  Image,
+  Switch,
 } from 'react-native';
-import { Search, Menu, Plus, Bell, Command, Zap } from 'lucide-react-native';
+import { Search, Menu, Plus, Bell, Command, Sun, Moon } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 interface TopBarProps {
@@ -47,21 +49,17 @@ const sectionTitles: Record<string, string> = {
 const { width } = Dimensions.get('window');
 
 export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPress, onGoToChat }: TopBarProps) {
-  const { palette } = useTheme();
+  const { palette, mode, toggle } = useTheme();
   const isTablet = width >= 768;
   const isDesktop = width >= 1200;
   const isMobile = width < 768;
+  const isDark = mode === 'dark';
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile, { backgroundColor: palette.background.primary, borderBottomColor: palette.border.default }]}>
       {/* Left Section - Menu toggle at far left + Search */}
       <View style={[styles.leftSection, isMobile && styles.leftSectionMobile]}>
-        <TouchableOpacity
-          style={[styles.menuButton, isMobile && styles.menuButtonMobile]}
-          onPress={onToggleSidebar}
-        >
-          <Menu size={18} color={palette.text.secondary} strokeWidth={2} />
-        </TouchableOpacity>
+
         {!isMobile && (
           <View style={[styles.searchContainer, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }] }>
             <Search size={16} color={palette.text.muted} strokeWidth={2} />
@@ -74,6 +72,15 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
               <Command size={12} color={palette.text.muted} />
               <Text style={[styles.shortcutText, { color: palette.text.muted }]}>K</Text>
             </View>
+          </View>
+        )}
+        {!sidebarOpen && (
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../assets/images/Black.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         )}
       </View>
@@ -104,18 +111,34 @@ export function TopBar({ activeSection, onToggleSidebar, sidebarOpen, onLogoPres
         )}
         
         <View style={styles.userSection}>
-          <View style={[styles.userAvatar, { backgroundColor: palette.text.primary }]}>
+          <View style={[styles.userAvatar, { backgroundColor: palette.text.primary, borderColor: palette.border.default }]}>
             <Text style={[styles.userAvatarText, { color: palette.background.primary }]}>A</Text>
           </View>
           {!isMobile && (
             <View style={styles.userInfo}>
-              <Text style={styles.userNameText}>المدير</Text>
-              <Text style={styles.userStatusText}>متصل</Text>
+              <Text style={[styles.userNameText, { color: palette.text.primary }]}>المدير</Text>
+              <Text style={[styles.userStatusText, { color: palette.primary[500] }]}>متصل</Text>
             </View>
           )}
         </View>
+        <View style={[styles.themeToggle, { borderColor: palette.border.default, backgroundColor: palette.background.secondary }]}> 
+          <Sun size={14} color={palette.text.muted} style={styles.themeIcon} />
+          <Switch
+            value={isDark}
+            onValueChange={toggle}
+            trackColor={{ false: palette.border.default, true: palette.primary[500] }}
+            thumbColor={isDark ? palette.text.inverse : '#FFFFFF'}
+            ios_backgroundColor={palette.border.default}
+          />
+          <Moon size={14} color={palette.text.muted} style={styles.themeIcon} />
+        </View>
+        <TouchableOpacity
+          style={[styles.menuButton, isMobile && styles.menuButtonMobile, { backgroundColor: palette.background.secondary, borderColor: palette.border.default }]}
+          onPress={onToggleSidebar}
+        >
+          <Menu size={18} color={palette.text.secondary} strokeWidth={2} />
+        </TouchableOpacity>
       </View>
-
       {/* Mobile Actions Row */}
       {isMobile && (
         <View style={styles.mobileActionsRow}>
@@ -186,13 +209,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    marginLeft: 12,
   },
   menuButtonMobile: {
     width: 40,
     height: 40,
     borderRadius: 8,
   },
-  
+
+  logoWrapper: {
+    marginLeft: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+  },
+
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -373,7 +416,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textAlign: 'right',
   },
-  
+  themeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: 12,
+    gap: 6,
+  },
+  themeIcon: {
+    opacity: 0.7,
+  },
+
   // Mobile Actions Row
   mobileActionsRow: {
     flexDirection: 'row',

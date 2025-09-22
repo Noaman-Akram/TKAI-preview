@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Switch,
 } from 'react-native';
 import { 
   LayoutDashboard,
@@ -26,7 +27,9 @@ import {
   Sparkles,
   MapPin,
   PenTool,
-  Layers
+  Layers,
+  Sun,
+  Moon
 } from 'lucide-react-native';
 import { Image } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
@@ -92,7 +95,8 @@ const navigationItems = [
 ];
 
 export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDesktop }: SidebarProps) {
-  const { palette } = useTheme();
+  const { palette, mode, toggle } = useTheme();
+  const isDark = mode === 'dark';
   if (!isOpen) {
     return null;
   }
@@ -145,12 +149,14 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
         <ScrollView style={[styles.navigation, { backgroundColor: palette.background.primary }]} showsVerticalScrollIndicator={false}>
           {categories.map((category) => (
             <View key={category.id} style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>{category.label}</Text>
+              <Text style={[styles.categoryTitle, { color: palette.text.muted }]}>{category.label}</Text>
               {navigationItems
                 .filter(item => item.category === category.id)
                 .map((item) => {
                   const isActive = activeSection === item.id;
                   const IconComponent = item.icon as any;
+                  const navItemBackground = isActive ? palette.primary[600] : 'transparent';
+                  const navItemShadowColor = isActive ? palette.primary[600] : 'transparent';
 
                   return (
                     <TouchableOpacity
@@ -158,6 +164,7 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
                       style={[
                         styles.navItem,
                         isActive && styles.navItemActive,
+                        { backgroundColor: navItemBackground, shadowColor: navItemShadowColor },
                       ]}
                       onPress={() => handleSectionChange(item.id)}
                     >
@@ -192,17 +199,30 @@ export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDe
           ))}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: palette.background.secondary, borderTopColor: palette.border.default }]}>
+          <View style={[styles.themeToggleRow, { borderColor: palette.border.default, backgroundColor: palette.background.primary }]}> 
+            <Sun size={14} color={palette.text.muted} style={styles.themeIcon} />
+            <Text style={[styles.themeToggleLabel, { color: palette.text.secondary }]}>{isDark ? 'وضع مظلم' : 'وضع مضيء'}</Text>
+            <Switch
+              value={isDark}
+              onValueChange={toggle}
+              trackColor={{ false: palette.border.default, true: palette.primary[500] }}
+              thumbColor={isDark ? palette.text.inverse : '#FFFFFF'}
+              style={styles.themeSwitch}
+              ios_backgroundColor={palette.border.default}
+            />
+            <Moon size={14} color={palette.text.muted} style={styles.themeIcon} />
+          </View>
           <View style={styles.statusIndicator}>
-            <View style={styles.statusDot} />
+            <View style={[styles.statusDot, { backgroundColor: palette.primary[500] }]} />
             <Text style={[styles.statusText, { color: palette.text.muted }]}>متصل الآن</Text>
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>اللواء أحمد منصور</Text>
-              <Text style={styles.userRole}>وزارة الداخلية • قطاع الأمن العام</Text>
+              <Text style={[styles.userName, { color: palette.text.primary }]}>اللواء أحمد منصور</Text>
+              <Text style={[styles.userRole, { color: palette.text.muted }]}>وزارة الداخلية • قطاع الأمن العام</Text>
             </View>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: palette.primary[500], borderColor: palette.border.default }]}>
               <Text style={styles.avatarText}>أ</Text>
             </View>
           </View>
@@ -353,7 +373,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   navItemActive: {
-    backgroundColor: '#1E293B',
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -408,6 +427,28 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     backgroundColor: '#FAFBFC',
+  },
+  themeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  themeToggleLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  themeSwitch: {
+    marginHorizontal: 8,
+  },
+  themeIcon: {
+    opacity: 0.7,
   },
   statusIndicator: {
     flexDirection: 'row',

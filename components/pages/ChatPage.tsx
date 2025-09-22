@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle } from 'lucide-react-native';
+import { Send, Plus, Mic, Bot, User, Paperclip, FileText, Image as ImageIcon, Search as SearchIcon, ChevronDown, ChevronUp, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Pencil, X, Check } from 'lucide-react-native';
 import { db } from '@/firebaseConfig';
 import {
   collection,
@@ -50,6 +50,8 @@ interface Conversation {
   lastMessage?: string;
   createdAt?: any;
   updatedAt?: any;
+  customTitle?: string;
+  caseNumber?: string;
 }
 
 interface Message {
@@ -64,6 +66,68 @@ interface Message {
     size?: number;
   };
 }
+
+const DEFAULT_CONVERSATION_TITLE = 'محادثة جديدة';
+
+const isMeaningfulValue = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return false;
+  return trimmed !== 'غير متوفر';
+};
+
+const composeConversationTitle = (customTitle: string, caseNumber?: string | null) => {
+  const base = customTitle?.trim() || DEFAULT_CONVERSATION_TITLE;
+  const caseTrimmed = caseNumber?.trim();
+  if (isMeaningfulValue(caseTrimmed)) {
+    if (base.startsWith(caseTrimmed!)) return base;
+    return `${caseTrimmed} - ${base}`;
+  }
+  return base;
+};
+
+const stripCaseNumberFromTitle = (title: string, caseNumber?: string | null) => {
+  const trimmedTitle = title?.trim();
+  if (!trimmedTitle) return DEFAULT_CONVERSATION_TITLE;
+  const caseTrimmed = caseNumber?.trim();
+  if (isMeaningfulValue(caseTrimmed) && trimmedTitle.startsWith(caseTrimmed!)) {
+    const remainder = trimmedTitle.slice(caseTrimmed!.length).replace(/^[\s\-:|]+/, '').trim();
+    return remainder || DEFAULT_CONVERSATION_TITLE;
+  }
+  return trimmedTitle;
+};
+
+const cleanCaseNumberValue = (value: string) => {
+  return value
+    .replace(/[*`_]/g, '')
+    .replace(/[|].*$/, '')
+    .replace(/^[-–—]+\s*/, '')
+    .replace(/[،.,؛:]+$/, '')
+    .trim();
+};
+
+const extractCaseNumberFromText = (text?: string | null) => {
+  if (!text) return undefined;
+  const lines = text.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/^[-•▪●▸]+\s*/, '').trim();
+    const match = line.match(/رقم\s*المحضر\s*[\/\-]?\s*القضية\s*[:：]\s*(.+)$/i);
+    if (match) {
+      const candidate = cleanCaseNumberValue(match[1]);
+      if (isMeaningfulValue(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return undefined;
+};
+
+const extractCaseNumberFromStructured = (structured: any, fallbackText?: string) => {
+  if (structured?.type === 'legal') {
+    const fromStructured = extractCaseNumberFromText(structured.general);
+    if (fromStructured) return fromStructured;
+  }
+  return extractCaseNumberFromText(fallbackText);
+};
 
 export function ChatPage() {
   const { palette } = useTheme();
@@ -173,13 +237,42 @@ export function ChatPage() {
   const [reportStatus, setReportStatus] = useState<'idle'|'draft'|'final'>('idle');
   const [draftCollapsed, setDraftCollapsed] = useState(true);
   const flatListRef = useRef<FlatList<Message>>(null);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
 
   // Subscribe to conversations list
   useEffect(() => {
     const q = query(collection(db, 'conversations'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const items: Conversation[] = snap.docs.map((d) => ({ id: d.id, title: 'محادثة جديدة', persona: 'general', ...d.data() } as Conversation));
+      const items: Conversation[] = snap.docs.map((d) => {
+        const raw = d.data() as any;
+        const caseNumber = isMeaningfulValue(raw?.caseNumber) ? String(raw.caseNumber).trim() : undefined;
+        const rawTitle = typeof raw?.title === 'string' && raw.title.trim() ? raw.title.trim() : DEFAULT_CONVERSATION_TITLE;
+        const inferredCustomTitle = typeof raw?.customTitle === 'string' && raw.customTitle.trim()
+          ? raw.customTitle.trim()
+          : stripCaseNumberFromTitle(rawTitle, caseNumber);
+        const persona = (raw?.persona || 'general') as PersonaId;
+        const title = composeConversationTitle(inferredCustomTitle, caseNumber);
+        return {
+          id: d.id,
+          title,
+          persona,
+          locked: raw?.locked,
+          lastMessage: raw?.lastMessage,
+          createdAt: raw?.createdAt,
+          updatedAt: raw?.updatedAt,
+          customTitle: inferredCustomTitle,
+          caseNumber,
+        } as Conversation;
+      });
       setConversations(items);
+      setSelectedConversation((prev) => {
+        if (!prev) return prev;
+        const updated = items.find((c) => c.id === prev.id);
+        return updated ? { ...prev, ...updated } : prev;
+      });
     });
     return () => unsub();
   }, []);
@@ -204,7 +297,20 @@ export function ChatPage() {
       setMessages(msgs);
     });
     return () => unsub();
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.id, selectedConversation?.customTitle, selectedConversation?.caseNumber, selectedConversation?.title]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      const baseTitle = selectedConversation.customTitle
+        ? selectedConversation.customTitle
+        : stripCaseNumberFromTitle(selectedConversation.title || DEFAULT_CONVERSATION_TITLE, selectedConversation.caseNumber);
+      setTitleDraft(baseTitle);
+    } else {
+      setTitleDraft('');
+    }
+    setIsEditingTitle(false);
+    setSavingTitle(false);
+  }, [selectedConversation?.id, selectedConversation?.customTitle, selectedConversation?.caseNumber, selectedConversation?.title]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -306,10 +412,30 @@ export function ChatPage() {
       await setDoc(refDoc, payload, { merge: true });
       setReportStatus(status);
       // Also mirror minimal info on conversation for quick linking
-      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+      const inferredCustomTitle = selectedConversation.customTitle
+        ? selectedConversation.customTitle
+        : stripCaseNumberFromTitle(selectedConversation.title || DEFAULT_CONVERSATION_TITLE, selectedConversation.caseNumber);
+      const detectedCaseNumber = extractCaseNumberFromStructured(structured, liveDraft);
+      const conversationUpdate: Record<string, any> = {
         reportId,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (detectedCaseNumber) {
+        const baseCustomTitle = stripCaseNumberFromTitle(inferredCustomTitle, detectedCaseNumber);
+        const composedTitle = composeConversationTitle(baseCustomTitle, detectedCaseNumber);
+        conversationUpdate.caseNumber = detectedCaseNumber;
+        conversationUpdate.customTitle = baseCustomTitle;
+        conversationUpdate.title = composedTitle;
+        setSelectedConversation((prev) => {
+          if (!prev || prev.id !== selectedConversation.id) return prev;
+          return { ...prev, caseNumber: detectedCaseNumber, customTitle: baseCustomTitle, title: composedTitle };
+        });
+        setConversations((prev) => prev.map((conv) => (
+          conv.id === selectedConversation.id ? { ...conv, caseNumber: detectedCaseNumber, customTitle: baseCustomTitle, title: composedTitle } : conv
+        )));
+        setTitleDraft(baseCustomTitle);
+      }
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), conversationUpdate);
       // Feedback as assistant message
       setMessages(prev => [...prev, { id: Date.now().toString(), content: status==='final'? 'تم حفظ التقرير النهائي في قسم التقارير.' : 'تم حفظ المسودة. يمكنك المتابعة لاحقاً من نفس المحادثة.', type: 'assistant', timestamp: new Date() }]);
     } catch (e) {
@@ -524,21 +650,36 @@ export function ChatPage() {
 
       // Lock persona after first user message and update title/lastMessage
       if (!selectedConversation.locked) {
-        const newTitle = selectedConversation.title && selectedConversation.title !== 'محادثة جديدة'
-          ? selectedConversation.title
-          : text.slice(0, 40);
+        const fallbackTitle = text.slice(0, 40) || DEFAULT_CONVERSATION_TITLE;
+        const existingCustomTitle = selectedConversation.customTitle
+          ? selectedConversation.customTitle
+          : stripCaseNumberFromTitle(selectedConversation.title || DEFAULT_CONVERSATION_TITLE, selectedConversation.caseNumber);
+        const newCustomTitle = existingCustomTitle === DEFAULT_CONVERSATION_TITLE ? fallbackTitle : existingCustomTitle;
+        const composedTitle = composeConversationTitle(newCustomTitle, selectedConversation.caseNumber);
         await updateDoc(doc(db, 'conversations', selectedConversation.id), {
           locked: true,
-          title: newTitle || 'محادثة',
+          customTitle: newCustomTitle,
+          title: composedTitle,
           lastMessage: text.slice(0, 120),
           updatedAt: serverTimestamp(),
         });
-        setSelectedConversation({ ...selectedConversation, locked: true, title: newTitle || 'محادثة' });
+        setSelectedConversation((prev) => {
+          if (!prev || prev.id !== selectedConversation.id) return prev;
+          return { ...prev, locked: true, customTitle: newCustomTitle, title: composedTitle };
+        });
+        setConversations((prev) => prev.map((conv) => (
+          conv.id === selectedConversation.id
+            ? { ...conv, locked: true, customTitle: newCustomTitle, title: composedTitle, lastMessage: text.slice(0, 120) }
+            : conv
+        )));
       } else {
         await updateDoc(doc(db, 'conversations', selectedConversation.id), {
           lastMessage: text.slice(0, 120),
           updatedAt: serverTimestamp(),
         });
+        setConversations((prev) => prev.map((conv) => (
+          conv.id === selectedConversation.id ? { ...conv, lastMessage: text.slice(0, 120) } : conv
+        )));
       }
 
       const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
@@ -624,7 +765,8 @@ export function ChatPage() {
   const createConversation = async (p: PersonaId) => {
     // Create conversation doc
     const docRef = await addDoc(collection(db, 'conversations'), {
-      title: 'محادثة جديدة',
+      title: DEFAULT_CONVERSATION_TITLE,
+      customTitle: DEFAULT_CONVERSATION_TITLE,
       persona: p,
       locked: false,
       lastMessage: personaPrompts[p].intake.slice(0, 120),
@@ -637,7 +779,14 @@ export function ChatPage() {
       type: 'assistant',
       createdAt: serverTimestamp(),
     });
-    const conv: Conversation = { id: docRef.id, title: 'محادثة جديدة', persona: p, locked: false };
+    const conv: Conversation = {
+      id: docRef.id,
+      title: DEFAULT_CONVERSATION_TITLE,
+      persona: p,
+      locked: false,
+      customTitle: DEFAULT_CONVERSATION_TITLE,
+      caseNumber: undefined,
+    };
     setSelectedConversation(conv);
   };
 
@@ -646,7 +795,69 @@ export function ChatPage() {
     setSelectedConversation(null);
   };
 
+  const beginTitleEditing = () => {
+    if (!selectedConversation || deletingConversationId === selectedConversation.id) return;
+    const baseTitle = selectedConversation.customTitle
+      ? selectedConversation.customTitle
+      : stripCaseNumberFromTitle(selectedConversation.title || DEFAULT_CONVERSATION_TITLE, selectedConversation.caseNumber);
+    setTitleDraft(baseTitle);
+    setIsEditingTitle(true);
+  };
+
+  const cancelTitleEditing = () => {
+    if (savingTitle) return;
+    const baseTitle = selectedConversation?.customTitle
+      ? selectedConversation.customTitle
+      : selectedConversation
+        ? stripCaseNumberFromTitle(selectedConversation.title || DEFAULT_CONVERSATION_TITLE, selectedConversation.caseNumber)
+        : '';
+    setTitleDraft(baseTitle);
+    setIsEditingTitle(false);
+  };
+
+  const commitTitleEditing = async () => {
+    if (!selectedConversation || savingTitle) return;
+    const trimmed = titleDraft.trim();
+    let newCustomTitle = trimmed || DEFAULT_CONVERSATION_TITLE;
+    if (selectedConversation.caseNumber) {
+      newCustomTitle = stripCaseNumberFromTitle(newCustomTitle, selectedConversation.caseNumber);
+    }
+    const newTitle = composeConversationTitle(newCustomTitle, selectedConversation.caseNumber);
+    setSavingTitle(true);
+    try {
+      await updateDoc(doc(db, 'conversations', selectedConversation.id), {
+        customTitle: newCustomTitle,
+        title: newTitle,
+        updatedAt: serverTimestamp(),
+      });
+      setSelectedConversation((prev) => {
+        if (!prev || prev.id !== selectedConversation.id) return prev;
+        return { ...prev, customTitle: newCustomTitle, title: newTitle };
+      });
+      setConversations((prev) => prev.map((conv) => (
+        conv.id === selectedConversation.id ? { ...conv, customTitle: newCustomTitle, title: newTitle } : conv
+      )));
+      setTitleDraft(newCustomTitle);
+      setIsEditingTitle(false);
+    } catch (e: any) {
+      Alert.alert('تعذر إعادة التسمية', e?.message || 'حدث خطأ أثناء تحديث عنوان المحادثة.');
+    } finally {
+      setSavingTitle(false);
+    }
+  };
+
   const confirmDeleteConversation = (convId: string) => {
+    if (deletingConversationId) return;
+
+    if (Platform.OS === 'web') {
+      const confirmFn = (globalThis as { confirm?: (message?: string) => boolean }).confirm;
+      const canDelete = typeof confirmFn === 'function'
+        ? confirmFn('هل تريد حذف هذه المحادثة وجميع رسائلها؟')
+        : true;
+      if (canDelete) deleteConversation(convId);
+      return;
+    }
+
     Alert.alert('حذف المحادثة', 'هل تريد حذف هذه المحادثة وجميع رسائلها؟', [
       { text: 'إلغاء', style: 'cancel' },
       { text: 'حذف', style: 'destructive', onPress: () => deleteConversation(convId) },
@@ -655,6 +866,7 @@ export function ChatPage() {
 
   const deleteConversation = async (convId: string) => {
     try {
+      setDeletingConversationId(convId);
       const msgs = await getDocs(collection(db, 'conversations', convId, 'messages'));
       await Promise.allSettled(
         msgs.docs.map(d => deleteDoc(doc(db, 'conversations', convId, 'messages', d.id)))
@@ -663,8 +875,12 @@ export function ChatPage() {
       try { await deleteDoc(doc(db, 'reports', convId)); } catch {}
       await deleteDoc(doc(db, 'conversations', convId));
       if (selectedConversation?.id === convId) setSelectedConversation(null);
+      setMessages(prev => (selectedConversation?.id === convId ? [] : prev));
+      setConversations(prev => prev.filter(conv => conv.id !== convId));
     } catch (e: any) {
       Alert.alert('تعذر الحذف', e?.message || 'حدث خطأ أثناء حذف المحادثة.');
+    } finally {
+      setDeletingConversationId(null);
     }
   };
 
@@ -782,14 +998,21 @@ export function ChatPage() {
                       )}
                     </View>
                     {!conversationsCollapsed && (
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
                         <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
                       </View>
                     )}
                     {selectedConversation?.id === item.id && !conversationsCollapsed && (
-                      <TouchableOpacity onPress={() => confirmDeleteConversation(item.id)} style={styles.trashBtn}>
-                        <Trash2 size={16} color={Colors.text.tertiary} />
+                      <TouchableOpacity
+                        onPress={() => confirmDeleteConversation(item.id)}
+                        style={styles.trashBtn}
+                        disabled={deletingConversationId === item.id}
+                      >
+                        <Trash2
+                          size={16}
+                          color={deletingConversationId === item.id ? Colors.text.muted : Colors.text.tertiary}
+                        />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -804,20 +1027,71 @@ export function ChatPage() {
             <View style={styles.header}>
               <View style={styles.headerRightCluster}>
                 <View style={styles.headerContent}>
-                  <Text style={styles.headerTitle}>{selectedConversation?.title || 'المساعد الذكي'}</Text>
                   {selectedConversation ? (
-                    <View style={styles.personaBadge}>
-                      {selectedConversation.persona === 'legal' ? (
-                        <FileText size={14} color={Colors.primary[600]} />
-                      ) : selectedConversation.persona === 'fake_news' ? (
-                        <SearchIcon size={14} color={Colors.primary[600]} />
-                      ) : (
-                        <Bot size={14} color={Colors.primary[600]} />
-                      )}
-                      <Text style={styles.personaBadgeText}>{personaPrompts[selectedConversation.persona]?.label}</Text>
-                    </View>
+                    <>
+                      <View style={styles.titleRow}>
+                        {isEditingTitle ? (
+                          <TextInput
+                            style={styles.titleEditInput}
+                            value={titleDraft}
+                            onChangeText={setTitleDraft}
+                            editable={!savingTitle}
+                            onSubmitEditing={commitTitleEditing}
+                            returnKeyType="done"
+                            blurOnSubmit
+                            placeholder="اكتب عنوان المحادثة"
+                            autoFocus
+                          />
+                        ) : (
+                          <Text style={styles.headerTitle} numberOfLines={1}>
+                            {selectedConversation.title || DEFAULT_CONVERSATION_TITLE}
+                          </Text>
+                        )}
+                        <View style={styles.titleActions}>
+                          {isEditingTitle ? (
+                            <>
+                              <TouchableOpacity
+                                onPress={commitTitleEditing}
+                                style={[styles.titleIconButton, savingTitle && styles.titleIconButtonDisabled]}
+                                disabled={savingTitle}
+                              >
+                                <Check size={18} color={Colors.primary[600]} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={cancelTitleEditing}
+                                style={[styles.titleIconButton, savingTitle && styles.titleIconButtonDisabled]}
+                                disabled={savingTitle}
+                              >
+                                <X size={18} color={Colors.text.tertiary} />
+                              </TouchableOpacity>
+                            </>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={beginTitleEditing}
+                              style={[styles.titleIconButton, deletingConversationId === selectedConversation.id && styles.titleIconButtonDisabled]}
+                              disabled={deletingConversationId === selectedConversation.id}
+                            >
+                              <Pencil size={18} color={Colors.text.tertiary} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.personaBadge}>
+                        {selectedConversation.persona === 'legal' ? (
+                          <FileText size={14} color={Colors.primary[600]} />
+                        ) : selectedConversation.persona === 'fake_news' ? (
+                          <SearchIcon size={14} color={Colors.primary[600]} />
+                        ) : (
+                          <Bot size={14} color={Colors.primary[600]} />
+                        )}
+                        <Text style={styles.personaBadgeText}>{personaPrompts[selectedConversation.persona]?.label}</Text>
+                      </View>
+                    </>
                   ) : (
-                    <Text style={styles.headerSubtitle}>اختر نوع المساعدة ثم ابدأ المحادثة</Text>
+                    <>
+                      <Text style={styles.headerTitle}>المساعد الذكي</Text>
+                      <Text style={styles.headerSubtitle}>اختر نوع المساعدة ثم ابدأ المحادثة</Text>
+                    </>
                   )}
                 </View>
               </View>
@@ -1011,7 +1285,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
     backgroundColor: Colors.background.primary,
@@ -1020,16 +1294,51 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     ...TextStyles.heading3,
     marginBottom: Spacing[1],
-    textAlign: 'right',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...TextStyles.caption,
-    textAlign: 'right',
+    textAlign: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing[2],
+    width: '100%',
+  },
+  titleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+  },
+  titleEditInput: {
+    minWidth: 200,
+    maxWidth: Platform.OS === 'web' ? 360 : 260,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing[2],
+    paddingVertical: Spacing[1],
+    backgroundColor: Colors.background.secondary,
+    textAlign: 'center',
+    color: Colors.text.primary,
+    fontFamily: Typography.weights.semibold,
+    fontSize: Typography.sizes['3xl'],
+  },
+  titleIconButton: {
+    padding: Spacing[1],
+    borderRadius: BorderRadius.default,
+  },
+  titleIconButtonDisabled: {
+    opacity: 0.4,
   },
   headerRightCluster: {
     flexDirection: 'row',
@@ -1333,11 +1642,13 @@ const styles = StyleSheet.create({
     fontFamily: Typography.weights.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing[1],
+    textAlign: 'center',
   },
   convItemMeta: {
     fontSize: Typography.sizes.sm,
     fontFamily: Typography.weights.regular,
     color: Colors.text.muted,
+    textAlign: 'center',
   },
   chatArea: {
     flex: 1,
