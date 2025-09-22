@@ -1013,13 +1013,27 @@ export function ChatPage() {
                   onPress={() => setSelectedConversation(item)}
                 >
                   <View style={styles.convItemRow}>
-                    <View style={styles.convIconBadge}>
-                      {item.persona === 'legal' ? (
-                        <FileText size={14} color={Colors.primary[600]} />
-                      ) : item.persona === 'fake_news' ? (
-                        <SearchIcon size={14} color={Colors.primary[600]} />
-                      ) : (
-                        <Bot size={14} color={Colors.primary[600]} />
+                    <View style={styles.convIconGroup}>
+                      <View style={styles.convIconBadge}>
+                        {item.persona === 'legal' ? (
+                          <FileText size={14} color={Colors.primary[600]} />
+                        ) : item.persona === 'fake_news' ? (
+                          <SearchIcon size={14} color={Colors.primary[600]} />
+                        ) : (
+                          <Bot size={14} color={Colors.primary[600]} />
+                        )}
+                      </View>
+                      {selectedConversation?.id === item.id && !conversationsCollapsed && (
+                        <TouchableOpacity
+                          onPress={() => confirmDeleteConversation(item.id)}
+                          style={styles.trashBtn}
+                          disabled={deletingConversationId === item.id}
+                        >
+                          <Trash2
+                            size={16}
+                            color={deletingConversationId === item.id ? Colors.text.muted : Colors.text.tertiary}
+                          />
+                        </TouchableOpacity>
                       )}
                     </View>
                     {!conversationsCollapsed && (
@@ -1027,18 +1041,6 @@ export function ChatPage() {
                         <Text style={styles.convItemTitle} numberOfLines={1}>{item.title || 'محادثة جديدة'}</Text>
                         <Text style={styles.convItemMeta} numberOfLines={1}>{personaPrompts[item.persona]?.label || 'مساعد عام'}</Text>
                       </View>
-                    )}
-                    {selectedConversation?.id === item.id && !conversationsCollapsed && (
-                      <TouchableOpacity
-                        onPress={() => confirmDeleteConversation(item.id)}
-                        style={styles.trashBtn}
-                        disabled={deletingConversationId === item.id}
-                      >
-                        <Trash2
-                          size={16}
-                          color={deletingConversationId === item.id ? Colors.text.muted : Colors.text.tertiary}
-                        />
-                      </TouchableOpacity>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -1650,8 +1652,8 @@ const createStyles = (mode: ThemeMode, palette: PaletteShape) => StyleSheet.crea
     color: Colors.text.inverse,
   },
   newConversationIconButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1676,6 +1678,11 @@ const createStyles = (mode: ThemeMode, palette: PaletteShape) => StyleSheet.crea
     alignItems: 'center',
     gap: Spacing[3],
   },
+  convIconGroup: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: Spacing[1],
+  },
   convItemContent: {
     flex: 1,
     alignItems: 'flex-end',
@@ -1683,15 +1690,17 @@ const createStyles = (mode: ThemeMode, palette: PaletteShape) => StyleSheet.crea
   },
   trashBtn: {
     padding: Spacing[1],
-    marginRight: 'auto',
-    marginLeft: 0,
+    borderRadius: BorderRadius.md,
   },
   collapseBtn: {
-    padding: Spacing[1],
+    width: 32,
+    height: 32,
     borderWidth: 1,
     borderColor: Colors.border.default,
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   convIconBadge: {
     width: 28,

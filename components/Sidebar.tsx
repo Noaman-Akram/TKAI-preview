@@ -95,7 +95,7 @@ const navigationItems = [
 ];
 
 const LIGHT_LOGO = require('../assets/images/Black.png');
-const DARK_LOGO = require('../assets/images/Logo.jpeg');
+const DARK_LOGO = require('../assets/images/White 2.png');
 
 export function Sidebar({ activeSection, onSectionChange, isOpen, onToggle, isDesktop }: SidebarProps) {
   const { palette, mode, toggle } = useTheme();
